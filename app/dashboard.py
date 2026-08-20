@@ -20,7 +20,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.components import issue_explorer, methodology, overview, trends
 from app.utils.data_loader import load_all
-from app.utils.theme import inject_css
+from app.utils.formatting import format_count
+from app.utils.theme import COLORS, inject_css
 
 st.set_page_config(
     page_title="BCA Mobile — Customer Voice",
@@ -50,8 +51,27 @@ def _methodology_page():
     methodology.render(TABLES)
 
 
+# --- Sidebar: compact product identity, above the nav list --------------
+# Built as single-line fragments on purpose - a multi-line indented HTML
+# string gets misread as a markdown code block by the client-side renderer.
+with st.sidebar:
+    brand_html = (
+        '<div style="display:flex;align-items:center;gap:10px;">'
+        f'<div style="width:32px;height:32px;border-radius:8px;background:{COLORS["primary"]};'
+        'color:#fff;display:flex;align-items:center;justify-content:center;'
+        'font-family:\'Inter\',sans-serif;font-weight:800;font-size:0.95rem;">B</div>'
+        f'<div style="font-family:\'Inter\',sans-serif;font-weight:800;font-size:0.95rem;'
+        f'color:{COLORS["ink"]};line-height:1.15;">BCA Mobile</div>'
+        '</div>'
+        '<div class="ci-breadcrumb" style="margin-top:12px;margin-bottom:0;">Customer Intelligence</div>'
+        f'<div style="font-family:\'Inter\',sans-serif;font-weight:600;font-size:0.84rem;'
+        f'color:{COLORS["muted"]};margin-top:1px;">Customer Voice</div>'
+    )
+    st.markdown(brand_html, unsafe_allow_html=True)
+    st.divider()
+
 pages = [
-    st.Page(_overview_page, title="Overview & Priority", icon="\U0001F4CB", default=True),
+    st.Page(_overview_page, title="Overview", icon="\U0001F4CB", default=True),
     st.Page(_trends_page, title="Trends", icon="\U0001F4C8"),
     st.Page(_explorer_page, title="Issue Explorer", icon="\U0001F50D"),
     st.Page(_methodology_page, title="Methodology", icon="\U0001F4D0"),
@@ -59,17 +79,17 @@ pages = [
 
 nav = st.navigation(pages)
 
+# --- Sidebar: dataset status, below the nav list -------------------------
 with st.sidebar:
-    st.markdown(
-        '<div class="fr-eyebrow" style="margin-top:4px;">BCA Mobile</div>'
-        '<h3 style="margin-top:0;">Customer Voice</h3>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p class="fr-muted">Play Store review analysis: what customers are '
-        'hitting, how often, and how confident we are in the count.</p>',
-        unsafe_allow_html=True,
-    )
     st.divider()
+    review_count = format_count(len(TABLES["reviews"]))
+    status_html = (
+        '<div class="ci-breadcrumb" style="margin-bottom:2px;">Dataset</div>'
+        f'<div style="font-family:\'Inter\',sans-serif;font-weight:600;font-size:0.84rem;'
+        f'color:{COLORS["ink"]};">Google Play Reviews</div>'
+        f'<div class="ci-mono" style="font-size:0.74rem;color:{COLORS["success"]};margin-top:4px;">'
+        f'&#9679; Analysis ready &middot; {review_count} reviews</div>'
+    )
+    st.markdown(status_html, unsafe_allow_html=True)
 
 nav.run()

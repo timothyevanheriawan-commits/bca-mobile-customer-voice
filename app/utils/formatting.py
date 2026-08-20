@@ -2,29 +2,20 @@
 
 Kept separate from data_loader.py on purpose: this module is pure string/
 color formatting with no pandas logic, so it's safe to import into any page
-without pulling in caching or file I/O.
+without pulling in caching or file I/O. Color values are sourced from
+app.utils.theme (TIER_COLORS / VALIDATION_COLORS / rating_tone) rather than
+duplicated here, so the palette lives in exactly one place.
 """
 
 from __future__ import annotations
+
+from app.utils.theme import COLORS, TIER_COLORS, VALIDATION_COLORS
 
 # Manual overrides for acronyms/terms that title-casing would mangle.
 _LABEL_OVERRIDES = {
     "otp": "OTP",
     "ui": "UI",
     "ux": "UX",
-}
-
-TIER_COLORS = {
-    "High": "#B3261E",
-    "Medium": "#B8860B",
-    "Low": "#2E7D32",
-}
-
-VALIDATION_COLORS = {
-    "validated": "#2E7D32",
-    "partially_validated": "#B8860B",
-    "needs_regex_fix": "#B3261E",
-    "unvalidated": "#6B7280",
 }
 
 TREND_ARROWS = {
@@ -42,13 +33,27 @@ def issue_label(category: str) -> str:
 
 
 def tier_color(tier: str) -> str:
-    return TIER_COLORS.get(tier, "#6B7280")
+    return TIER_COLORS.get(tier, COLORS["faint"])
+
+
+def tier_tone(tier: str) -> str:
+    """Semantic tone name (for theme.tag / theme.signal_banner) matching a priority tier."""
+    return {"High": "danger", "Medium": "warning", "Low": "success"}.get(tier, "neutral")
 
 
 def validation_color(status) -> str:
     if status is None:
         return VALIDATION_COLORS["unvalidated"]
-    return VALIDATION_COLORS.get(status, "#6B7280")
+    return VALIDATION_COLORS.get(status, COLORS["faint"])
+
+
+def validation_tone(status) -> str:
+    """Semantic tone name matching a validation status."""
+    return {
+        "validated": "success",
+        "partially_validated": "warning",
+        "needs_regex_fix": "danger",
+    }.get(status, "neutral")
 
 
 def trend_arrow(trend) -> str:

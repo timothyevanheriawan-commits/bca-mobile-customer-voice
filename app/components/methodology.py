@@ -10,17 +10,34 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.utils.formatting import format_count, issue_label, validation_color
+from app.utils.formatting import format_count, issue_label, validation_tone
+from app.utils.theme import breadcrumb, pipeline_flow, tag
+
+PIPELINE_STEPS = [
+    ("Reviews", "Google Play reviews for the BCA Mobile app, collected via google-play-scraper."),
+    ("Preprocessing", "Dedup, text normalization, rating_group and review_length computed."),
+    ("Classification", "Each review tagged against 10 issue categories with hand-written, auditable regex rules \u2014 not a black-box model."),
+    ("Issue signals", "Frequency, share of negative reviews, and monthly trend direction per category."),
+    ("Prioritization", "Frequency + trend + validation status combined into a plain, auditable priority tier."),
+]
 
 
 def render(tables: dict) -> None:
     validation_df = tables["validation"]
 
-    st.markdown('<div class="fr-eyebrow">Methodology</div>', unsafe_allow_html=True)
+    st.markdown(breadcrumb("Methodology"), unsafe_allow_html=True)
     st.title("How this was built, and what to trust")
-    st.divider()
+    st.markdown(
+        '<p class="ci-subtitle">Raw reviews become issue signals, issue signals become '
+        'priorities \u2014 every stage below is inspectable, not a black box.</p>',
+        unsafe_allow_html=True,
+    )
+    st.write("")
 
-    st.subheader("Pipeline")
+    pipeline_flow(PIPELINE_STEPS)
+
+    st.divider()
+    st.subheader("Pipeline, in detail")
     st.markdown(
         """
 1. **Collection** &mdash; Google Play reviews for the BCA Mobile app, scraped via
@@ -43,14 +60,15 @@ def render(tables: dict) -> None:
     )
 
     st.divider()
-    st.subheader("Validation status &mdash; live from `data/validation/`")
+    st.subheader("Validation status \u2014 live from data/validation/")
     st.markdown(
-        '<p class="fr-muted">This table is computed directly from the annotated CSVs '
+        '<p class="ci-subtitle">This table is computed directly from the annotated CSVs '
         'in the repo every time this page loads. If a category shows '
         '<code>needs_regex_fix</code> here, treat its frequency numbers elsewhere in '
         'this dashboard as provisional until that\u2019s resolved.</p>',
         unsafe_allow_html=True,
     )
+    st.write("")
 
     needs_fix = validation_df[validation_df["validation_status"] == "needs_regex_fix"]
     if len(needs_fix):
@@ -61,19 +79,19 @@ def render(tables: dict) -> None:
             f"this dashboard may be inflated by false positives \u2014 don't quote them "
             f"externally until the regex is reworked and re-validated."
         )
+        st.write("")
 
     for _, row in validation_df.sort_values("issue").iterrows():
         status = row["validation_status"]
         cols = st.columns([2.3, 1.6, 1.6, 1.8])
         cols[0].markdown(f"**{issue_label(row['issue'])}**")
-        cols[1].markdown(
-            f'<span class="fr-tag" style="background-color:{validation_color(status)}">{status}</span>',
-            unsafe_allow_html=True,
-        )
+        cols[1].markdown(tag(status, validation_tone(status)), unsafe_allow_html=True)
         precision = row["precision"]
-        cols[2].markdown(f"precision: {precision:.3f}" if precision is not None and precision == precision else "precision: \u2013")
+        precision_txt = f"precision: {precision:.3f}" if precision is not None and precision == precision else "precision: \u2013"
+        cols[2].markdown(f'<span class="ci-mono">{precision_txt}</span>', unsafe_allow_html=True)
         cols[3].markdown(
-            f"{format_count(row['precision_annotated'])}/{format_count(row['precision_sample_size'])} annotated"
+            f'<span class="ci-mono">{format_count(row["precision_annotated"])}/{format_count(row["precision_sample_size"])} annotated</span>',
+            unsafe_allow_html=True,
         )
 
     st.divider()

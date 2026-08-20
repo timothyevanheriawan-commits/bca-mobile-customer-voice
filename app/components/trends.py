@@ -11,22 +11,27 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app.utils.formatting import format_pct, issue_label, trend_arrow
-from app.utils.theme import COLORS
+from app.utils.theme import COLORS, page_header
+
+# Chart line palette derived from the token set (interact + semantic tones +
+# two supporting neutrals), reused across every selected issue so trend
+# color never repeats accidentally within one chart.
+LINE_PALETTE = [
+    COLORS["interact"], COLORS["danger"], COLORS["warning"],
+    COLORS["success"], "#6E56CF", COLORS["navy"],
+]
 
 
 def render(tables: dict) -> None:
     monthly_df = tables["monthly"]
     trend_df = tables["trend"]
 
-    st.markdown('<div class="fr-eyebrow">Over Time</div>', unsafe_allow_html=True)
-    st.title("Is each issue getting more or less common?")
-    st.markdown(
-        '<p class="fr-muted">Share of that month\u2019s reviews mentioning each issue '
-        '\u2014 not raw counts, so a category isn\u2019t read as "growing" just because '
-        'total review volume grew that month.</p>',
-        unsafe_allow_html=True,
+    page_header(
+        "Trends",
+        "Trends",
+        "Is each issue getting more or less common, month over month?",
     )
-    st.divider()
+    st.write("")
 
     all_issues = sorted(monthly_df["issue"].unique())
     default_issues = (
@@ -46,7 +51,6 @@ def render(tables: dict) -> None:
         return
 
     fig = go.Figure()
-    palette = ["#2453A6", "#B3261E", "#B8860B", "#2E7D32", "#6B4EA0", "#1C2541"]
     for i, issue in enumerate(selected):
         sub = monthly_df[monthly_df["issue"] == issue].sort_values("month")
         fig.add_trace(
@@ -55,43 +59,44 @@ def render(tables: dict) -> None:
                 y=sub["share_of_month"],
                 mode="lines+markers",
                 name=issue_label(issue),
-                line=dict(color=palette[i % len(palette)], width=2.5),
+                line=dict(color=LINE_PALETTE[i % len(LINE_PALETTE)], width=2.5),
+                marker=dict(size=5),
             )
         )
 
     fig.update_layout(
-        plot_bgcolor=COLORS["surface"],
+        plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="IBM Plex Mono", color=COLORS["ink"]),
+        font=dict(family="Inter, sans-serif", color=COLORS["ink"], size=12),
         margin=dict(l=10, r=10, t=20, b=10),
         yaxis=dict(tickformat=".0%", gridcolor=COLORS["border"], title="Share of month's reviews"),
-        xaxis=dict(gridcolor=COLORS["border"]),
+        xaxis=dict(gridcolor="rgba(0,0,0,0)"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        height=440,
+        height=420,
     )
     st.plotly_chart(fig, width="stretch")
 
     st.divider()
     st.subheader("Trend direction, all categories")
+    st.write("")
 
     for _, row in trend_df.sort_values("issue").iterrows():
         arrow = trend_arrow(row["trend"])
-        cols = st.columns([2.5, 1, 1.3, 1.3, 1.3])
+        cols = st.columns([2.6, 1.3, 1.3, 1.3, 1.3])
         cols[0].markdown(f"**{issue_label(row['issue'])}**")
         cols[1].markdown(f"{arrow} {row['trend']}")
         if row["trend"] == "insufficient_data":
-            cols[2].markdown("&mdash;", unsafe_allow_html=True)
-            cols[3].markdown("&mdash;", unsafe_allow_html=True)
-            cols[4].markdown("&mdash;", unsafe_allow_html=True)
+            for c in cols[2:]:
+                c.markdown('<span class="ci-mono" style="color:{};">&mdash;</span>'.format(COLORS["faint"]), unsafe_allow_html=True)
         else:
-            cols[2].markdown(f"1st half: {format_pct(row['first_half_avg_share'])}")
-            cols[3].markdown(f"2nd half: {format_pct(row['second_half_avg_share'])}")
+            cols[2].markdown(f'<span class="ci-mono">1st half: {format_pct(row["first_half_avg_share"])}</span>', unsafe_allow_html=True)
+            cols[3].markdown(f'<span class="ci-mono">2nd half: {format_pct(row["second_half_avg_share"])}</span>', unsafe_allow_html=True)
             rel = row["relative_change"]
             rel_txt = f"{rel*100:+.0f}%" if rel == rel and rel is not None else "\u2013"
-            cols[4].markdown(f"rel. change: {rel_txt}")
+            cols[4].markdown(f'<span class="ci-mono">rel. change: {rel_txt}</span>', unsafe_allow_html=True)
 
     st.markdown(
-        '<p class="fr-muted" style="margin-top:10px;">Read direction only, not magnitude '
+        '<p class="ci-subtitle" style="margin-top:10px;">Read direction only, not magnitude '
         '\u2014 a -66% relative change means the second half of the window had noticeably '
         'fewer mentions, not a rigorous "66% improvement."</p>',
         unsafe_allow_html=True,

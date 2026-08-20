@@ -1,101 +1,113 @@
 # Session Handoff — bca-mobile-customer-voice
 
-**Date:** 2026-08-20
-**Status:** Classification validated and closed. Next: prioritization → dashboard.
+**Date:** 2026-08-20 (session 2, same day)
+**Status:** Dashboard built and working. **Two categories need another
+validation round before their numbers can be trusted — see below, this is
+important.**
+
+## ⚠️ Read this first: precision numbers in the previous handoff were wrong
+
+The previous handoff's "Final validated precision — all categories" table
+does not match what's actually in `data/validation/*.csv` right now. I
+re-ran `notebooks/05_prioritization.ipynb` fresh against the committed files
+(not from memory, not from the old handoff) and got different numbers for
+three categories:
+
+| Category | Previous handoff claimed | Actually in the repo right now |
+|---|---|---|
+| app_performance | 0.900 (validated) | **0.600 — needs_regex_fix** |
+| unexplained_deduction | 0.840 (validated, after Round 6) | **0.700 — needs_regex_fix** |
+| device_compatibility | 1.000 (n=5) | 0.833 (n=30 — bigger sample, probably more trustworthy) |
+
+Best guess at what happened: the previous handoff says the Round 6 fix for
+`unexplained_deduction` was "verified against the *existing* Round 5
+annotations," and also says the round3/round4/round5 files were "saved
+back into the repo" — they weren't. `git show --stat` on the last commit
+shows only the primary `precision_*.csv` files changed, no round-suffixed
+files. Whatever got `unexplained_deduction` to 0.840 and `app_performance`
+to 0.900 didn't make it into the file that `validation_status_table()`
+actually reads. `app_performance` wasn't even supposed to be touched that
+session (it wasn't one of the 3 stuck categories), so it regressing from
+0.900 to 0.600 in the committed file is the stranger of the two — worth
+checking whether the primary CSV got overwritten by a fresh unannotated
+sample at some point without the old annotations carried over.
+
+**I didn't try to fix the regex this session** — that's real classifier
+work. The dashboard (below) surfaces this correctly on its own: the
+Methodology page reads `validation_status_table()` live, so both categories
+show up flagged red as `needs_regex_fix` with a warning banner, not
+silently presented as fine.
 
 ## What happened this session
 
-Finished the classification/validation loop that was stuck across earlier
-sessions. Three categories had been failing precision validation for
-multiple rounds:
+1. Reviewed `src/prioritization.py` and `src/analysis.py` — logic is sound,
+   no changes needed. Deliberately not a single composite score; tier rules
+   are plain if/else so they're auditable (see module docstrings).
+2. Re-ran `notebooks/05_prioritization.ipynb` end-to-end against the current
+   `bca_mobile_reviews_classified.csv` — ran clean, no errors. This is what
+   surfaced the precision mismatch above.
+3. Built `app/dashboard.py` from scratch (was 0 bytes). Four pages via
+   `st.navigation`/`st.Page`, same pattern as the Retention/RFM dashboard:
+   - **Overview & Priority** — KPIs + the live priority table + a
+     share-of-negative-reviews bar chart, colored by tier
+   - **Trends** — monthly share line chart per issue, trend direction table
+   - **Issue Explorer** — pick a category, read the actual review text
+     behind it, filter by star rating, sort by recency or helpfulness
+   - **Methodology** — pipeline explanation + the live validation status
+     table + an explicit warning banner listing any category currently
+     below 0.80 precision
+4. All four pages verified with `streamlit.testing.v1.AppTest` (no
+   exceptions) plus a headless `streamlit run` smoke test (HTTP 200, clean
+   log). `use_container_width` calls updated to `width=` (old API is
+   deprecated, removal after 2025-12-31).
 
-| Category | Before this session | After |
-|---|---|---|
-| login_otp_access | 0.600–0.667 (stale samples, never actually re-validated) | **0.967** |
-| maintenance_downtime | 0.733–0.767 (same issue) | **0.833** |
-| unexplained_deduction | 0.433 (stuck across 2 prior rounds) | **0.840** (took 4 more rounds this session — see below) |
+## Design
 
-**Key finding:** the `_r1` validation sample files in the repo were stale —
-sampled from an older version of the classifier, not the code that was
-actually running. Neither `login_otp_access` nor `maintenance_downtime` had
-ever been validated against current code. Once re-sampled properly, both
-cleared 0.8 immediately.
+"Field report" direction — warm paper background (`#FAF8F4`), navy ink
+text, Manrope for headings / IBM Plex Mono for data, restrained blue accent
+(`#2453A6`). Signal colors (red/amber/green) reserved for priority tier and
+validation status only, so they carry real meaning instead of decorating
+everything. Theme lives in `app/utils/theme.py`.
 
-**unexplained_deduction was genuinely hard.** Four more rounds this session:
-- Round 3: fixed literal "gagal"-only detection → 0.633
-- Round 4: added more failure-word synonyms → **regressed to 0.567**
-  (synonym-chasing wasn't converging — every fix revealed new phrasing)
-- Round 5: abandoned synonym-chasing. Reworked the exclude logic to detect
-  whether a specific transaction TYPE is named (qris, transfer, top-up,
-  purchase...) near the deduction word, regardless of how the failure is
-  phrased. → 0.700
-- Round 6: closed two more gaps (generic "transaksi gagal" wording, "qris"
-  typos) found in the Round 5 sample. Verified against the *existing*
-  Round 5 annotations (not a fresh sample) before locking it in. → **0.840**
+## Architecture
 
-Full rationale and regex are documented in the `unexplained_deduction`
-section of `ISSUE_EXCLUDES` and the module docstring in
-`src/issue_classification.py` — read that before touching this category
-again.
+- `app/utils/data_loader.py` (new) — `st.cache_data`-wrapped loaders.
+  Computes frequency/trend/validation/priority tables live from the
+  committed CSVs on every load — this is intentional, see its docstring.
+  Nothing is hardcoded from a notebook run or a handoff doc.
+- `app/utils/formatting.py` — label/color/number formatting, no pandas.
+- `app/utils/theme.py` (new) — design tokens + one CSS injection.
+- `app/components/*.py` — one `render(tables: dict)` function per page.
+- `app/dashboard.py` — thin entry point, wires pages via `st.navigation`.
 
-## Files changed
+## Files changed this session
 
-- `src/issue_classification.py` — reworked `unexplained_deduction` excludes
-  (Rounds 3–6), full change history in the docstring
-- `data/processed/bca_mobile_reviews_classified.csv` — regenerated against
-  final classifier. **Important:** this file needs `review_length` and
-  `rating_group` columns computed *before* calling `classify_dataframe` —
-  see notebook 03 cell 2 for the exact pipeline. (I broke this once this
-  session by regenerating without those columns first — fixed, but future
-  regenerations should copy notebook 03's cell 2 exactly, not just call
-  `classify_dataframe` on the interim file directly.)
-- `data/validation/precision_*_round3.csv` / `_round4.csv` / `_round5.csv`
-  — fresh (unannotated) samples generated during this session
-- `data/validation/precision_*_round3_annotated.csv` /
-  `_round5_annotated.csv` — Timothy's actual annotations, saved back into
-  the repo (previously these only existed as chat uploads and would have
-  been lost)
+- `app/dashboard.py`, `app/components/*.py`, `app/utils/*.py` — dashboard
+  built (see above)
+- `notebooks/05_prioritization.ipynb` — re-executed in place, outputs now
+  reflect current data (including the two `needs_regex_fix` flags)
+- This file
 
-**Not yet committed to git** — all of the above is uncommitted in the
-working directory. Run `git add` / `git commit` before ending the session
-if you want this preserved, or re-clone will lose it.
+**Committed to git this session** — check `git log` if picking this up
+fresh; don't assume uncommitted like last time without checking.
 
-## Recall validation
+## Next steps
 
-`data/validation/recall_gap_sample.csv` was already fully annotated
-(50/50) from an earlier session — not touched this session, still valid.
-
-## Final validated precision — all categories
-
-| Category | Precision | Notes |
-|---|---|---|
-| login_otp_access | 0.967 | ✅ |
-| face_verification_failure | 0.933 | ✅ |
-| indicator_light_stuck | 0.900 | ✅ |
-| transaction_failed_balance_deducted | 0.900 | ✅ |
-| app_performance | 0.900 | ✅ |
-| unexplained_deduction | 0.840 | ✅ |
-| maintenance_downtime | 0.833 | ✅ |
-| customer_service | 0.833 | ✅ |
-| device_compatibility | 1.000 | ⚠️ n=5, small sample |
-| ui_ux_regression | 0.500 | ⚠️ n=2, too small to judge — not chased, category is genuinely rare (2 matches total) |
-
-## Next steps (not started yet)
-
-1. **Commit the above changes to git** if you want them kept.
-2. **Read `src/prioritization.py`** and notebook `05_prioritization.ipynb`
-   together — confirm the scoring logic (frequency × severity × recency,
-   or whatever it currently does) actually reflects what should be
-   prioritized, before just re-running it against the finalized
-   classification.
-3. **Re-run notebook 05** against the now-final
-   `bca_mobile_reviews_classified.csv`.
-4. **Build `app/dashboard.py`** — currently empty (0 bytes). This is the
-   one part of the pipeline not started at all. Should follow the same
-   Streamlit pattern as the Retention/RFM and TransJakarta dashboards from
-   earlier sessions.
-5. Optional: `ui_ux_regression` only has 2 total matches in the whole
-   5,000-review dataset — worth a quick sanity check on whether the
-   taxonomy/regex for that category is too narrow, or whether the app
-   genuinely just doesn't get many UI complaints. Not urgent, doesn't block
-   the dashboard.
+1. **Fix `app_performance` and `unexplained_deduction` regex again.** Given
+   the mismatch above, first re-confirm what's actually annotated in
+   `data/validation/precision_app_performance.csv` and
+   `precision_unexplained_deduction.csv` right now (`git show` won't help
+   here — the file on disk is the source of truth) before starting a new
+   validation round. Don't trust either this handoff or the previous one's
+   precision claims over the actual CSV.
+2. **Going forward: after any validation round, immediately re-run
+   `validation_status_table()`** (or just reload the Methodology page in
+   the dashboard) to confirm the number that lands in the primary
+   `precision_*.csv` file matches what you think you just annotated, before
+   writing it into a handoff as final. That would have caught this
+   discrepancy same-session instead of a session later.
+3. `ui_ux_regression` still only has 2 total matches in 5,000 reviews — same
+   as before, not urgent, worth a regex sanity check eventually.
+4. Run `streamlit run app/dashboard.py` locally to eyeball it for real
+   (only AppTest + headless smoke-tested here, never visually inspected in
+   a browser).

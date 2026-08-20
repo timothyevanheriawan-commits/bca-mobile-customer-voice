@@ -126,6 +126,33 @@ sample by hand before applying it (18/30 -> 30/30 agreement with a manual
 read) but this is still Claude's read, not Timothy's — the regenerated
 precision_unexplained_deduction.csv below still needs a real independent
 annotation pass before this category's numbers go in front of anyone.
+
+VALIDATION HISTORY — unexplained_deduction precision, all numbers from
+Timothy's own annotations in data/validation/ (Round 3 onward; Rounds 1-2
+above predate that discipline and should be read as directional only):
+  Round 3: 0.433 -> 0.633  (fixed literal "gagal"-only detection; missed
+           synonyms eror/batal/gabisa and negation abbreviations tdk/g)
+  Round 4: 0.633 -> 0.567  (fixed those synonyms, but a fresh sample showed
+           MORE synonyms — pending/belum berhasil/tidak diproses/typos.
+           Precision regressed: synonym-chasing was not converging.)
+  Round 5: 0.567 -> 0.700  (abandoned synonym-chasing entirely. Rewrote the
+           exclude to detect WHETHER A TRANSACTION TYPE IS NAMED — qris,
+           transfer, top-up, purchase, etc. — near the deduction word,
+           regardless of how the failure itself is phrased. This is the
+           actual distinguishing signal between this category and
+           transaction_failed_balance_deducted.)
+  Round 6: 0.700 -> 0.840  (same rework, closed two remaining gaps found in
+           the Round 5 sample: generic "transaksi gagal" wording with no
+           named type, and "qris" typos/spacing. Scored against the
+           existing Round 5 annotations, not a fresh sample — re-ran the
+           updated classifier over those same 30 already-labeled reviews
+           and confirmed every row it dropped had a human-given correct=0.)
+  FINAL (all three previously-failing categories, Timothy-annotated):
+    unexplained_deduction: 0.840 | login_otp_access: 0.967 |
+    maintenance_downtime: 0.833
+  Classification is considered closed as of Round 6. Any future precision
+  drift should be caught by re-running notebook 04 against a fresh sample,
+  not assumed from this history.
 """
 
 import re
@@ -243,19 +270,49 @@ ISSUE_RULES = {
 # scoring or weighting.
 ISSUE_EXCLUDES = {
     "unexplained_deduction": [
-        # "gagal" (failed) near the deduction word means there's a specific
-        # attempted transaction being described — that's
-        # transaction_failed_balance_deducted's story, not this category's
-        # ("not tied to a specific attempted transaction"). Broadened to
-        # cover the "saldo hilang/berkurang" trigger family too, not just
-        # "kepotong/potongan" — see ROUND 3 note in the module docstring.
-        r"\bgagal\b.{0,60}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
-        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,60}\bgagal\b",
-        # a top-up/purchase that never arrived but still got charged is the
-        # same "specific failed transaction" story, just phrased without the
-        # literal word "gagal" (e.g. "belum masuk", "gak ke kirim")
-        r"\b(tidak|blm|belum|belom|ga|gak|gk|ngak|ngga|nggak)\s*(ke\s?)?(masuk|kirim|terima)\b.{0,60}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
-        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,60}\b(tidak|blm|belum|belom|ga|gak|gk|ngak|ngga|nggak)\s*(ke\s?)?(masuk|kirim|terima)\b",
+        # ROUND 5 — full rework, not another synonym patch.
+        #
+        # Rounds 1-4 tried to detect every way a review can say "I attempted
+        # a transaction and it failed/errored/got cancelled/is pending" —
+        # gagal, eror, batal, ga bisa, tidak berhasil, belum berhasil, tidak
+        # diproses, pending, plus typos and abbreviations of all of those.
+        # Precision oscillated (0.433 -> 0.633 -> 0.567) instead of
+        # converging: closing one synonym gap kept revealing another,
+        # because the review text can describe "failed" in effectively
+        # unlimited colloquial ways.
+        #
+        # New approach: stop trying to detect the failure wording at all.
+        # Instead, detect whether the review names a SPECIFIC transaction
+        # TYPE (QRIS, transfer, top-up, a purchase, a bill payment...).
+        # Almost every false positive in every round mentioned one of these
+        # regardless of how the failure itself was phrased — that's the
+        # actual signal, not the failure verb. If a transaction type is
+        # named near the deduction word, it's a specific-attempt story ->
+        # transaction_failed_balance_deducted's territory, not this
+        # category's ("balance moved with no stated transaction at all").
+        # Window set to 500 (dataset's max review length) rather than a
+        # tighter number — in a long rambling review the transaction keyword
+        # and the deduction word can be far apart, and these keywords are
+        # specific enough (qris/qr/va/transfer/beli/bayar/pulsa/token) that
+        # requiring proximity added a failure mode without adding precision.
+        # "qr" added alongside "qris" — several reviews shorten it.
+        # ROUND 6: after the ROUND 5 rework, the last false positives all
+        # named the transaction generically ("transaksi gagal") instead of
+        # a specific type (qris/transfer/beli/...), or misspelled "qris" as
+        # "qiris"/"q ris" — neither was in the keyword list.
+        #
+        # NOTE: excluding on bare "transaksi" (without requiring "gagal")
+        # was tried first and rejected — it wrongly excluded genuine
+        # unexplained_deduction cases like "ada transaksi yang tidak saya
+        # lakukan, saldo berkurang" (an unauthorized-transaction complaint,
+        # which IS this category's story). Requiring "gagal" specifically
+        # keeps that case tagged while still catching the actual FPs, all of
+        # which used "transaksi gagal" verbatim — checked against the
+        # ROUND 5 annotated sample (not a fresh one) before adding.
+        r"\btr[ae]n?[sk]aksi\b.{0,60}\bgagal\b.{0,500}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
+        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,500}\btr[ae]n?[sk]aksi\b.{0,60}\bgagal\b",
+        r"\b(qris|qr|q\s*ris|qiris|va|virtual\s*account|transfer|\btf\b|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token|tarik\s*tunai)\b.{0,500}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
+        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,500}\b(qris|qr|q\s*ris|qiris|va|virtual\s*account|transfer|\btf\b|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token|tarik\s*tunai)\b",
         # a named, understood fee ("biaya admin", "potongan bulanan") is an
         # explained deduction — the complaint is the amount/frequency, not
         # "where did my money go"

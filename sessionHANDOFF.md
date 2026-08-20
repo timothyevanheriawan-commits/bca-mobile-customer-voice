@@ -1,9 +1,128 @@
 # Session Handoff — bca-mobile-customer-voice
 
-**Date:** 2026-08-20 (session 2, same day)
-**Status:** Dashboard built and working. **Two categories need another
-validation round before their numbers can be trusted — see below, this is
-important.**
+**Date:** 2026-08-21 (session 3)
+**Status:** Full UI/UX redesign — "Customer Intelligence Console" direction,
+replacing the earlier "field report" theme. Dashboard is visually verified
+in a real browser this time (screenshots + interactive filter checks), not
+just AppTest. **The two `needs_regex_fix` categories from the previous
+session (`app_performance`, `unexplained_deduction`) are still unfixed —
+this session was UI-only and deliberately did not touch classification
+logic.** See the previous entry below for that context; nothing about it
+changed.
+
+## What happened this session
+
+Rebuilt the visual design system end to end, per a design brief targeting a
+"modern banking intelligence dashboard × Voice of Customer platform" feel
+instead of the previous warm-paper "field report" look.
+
+**Design system (`app/utils/theme.py`, full rewrite):**
+- Cool-neutral palette (`#F5F7FA` bg / `#0A4FA3` + `#1677D2` blues) replacing
+  the warm beige/navy field-report theme.
+- Inter for all UI text; IBM Plex Mono pulled back to data/timestamps/
+  precision numbers only (was applied globally before — the single biggest
+  "generic Streamlit project" tell called out in the brief).
+- Semantic red/amber/green reserved strictly for severity, trend, and
+  validation confidence — nothing else uses them decoratively.
+- New shared HTML fragment builders (`page_header`, `tag`, `metric_row`,
+  `signal_banner`, `pipeline_flow`) so every page pulls markup from one
+  place instead of writing one-off inline HTML per component.
+- `app/utils/formatting.py` now derives its color maps from `theme.COLORS`
+  instead of duplicating hex values.
+
+**App shell (`app/dashboard.py`):** compact sidebar identity block (mark +
+wordmark + "Customer Intelligence" eyebrow) above the nav list, dataset
+status ("● Analysis ready · 5,000 reviews") below it — real data, not
+invented metrics.
+
+**Pages, in priority order per the brief:**
+1. `issue_explorer.py` — rebuilt as an evidence-record view: compact metric
+   strip, `st.segmented_control` for rating/sort filters (was
+   multiselect + radio), review cards with a rating-severity-colored left
+   rail instead of plain white boxes.
+2. `overview.py` — added a dominant "top priority signal" banner above the
+   KPI row, driven directly off `priority_df.iloc[0]` so it can't drift out
+   of sync with the table below it. Priority table restyled with pill tags.
+3. `trends.py` — restyled chart chrome and trend-direction rows onto the
+   new tokens, transparent chart backgrounds instead of boxed white panels.
+4. `methodology.py` — added a horizontal pipeline-flow diagram (Reviews →
+   Preprocessing → Classification → Issue signals → Prioritization) above
+   the existing written pipeline explanation, as the page's signature
+   element.
+
+## Two real bugs found by actually looking at it (not just AppTest)
+
+AppTest and a headless smoke test both passed cleanly, but neither one
+catches rendering bugs — only Python exceptions. Screenshotting each page
+in a real headless browser surfaced two things AppTest missed entirely:
+
+1. **`st.segmented_control` selected state was Streamlit's default red**,
+   not the theme's blue — my first CSS pass targeted
+   `[data-testid="stSegmentedControl"] label`, which doesn't exist in this
+   Streamlit version (1.62 renders segmented control through
+   `[data-testid="stButtonGroup"]` with `button[data-selected="true"]`).
+   Same root issue on the multiselect tags in Trends: `[data-baseweb="tag"]`
+   is gone too — Streamlit 1.62 moved multiselect off BaseWeb onto
+   react-aria, so the real hook is
+   `[data-testid="stMultiSelectTagsContainer"] span[data-tag]`. If you're on
+   a different Streamlit version, re-inspect the DOM before assuming these
+   selectors still match — this library's internal markup is not stable
+   across versions and doesn't show up in any changelog most people read.
+2. **A literal `</div>` was leaking into every Issue Explorer review card.**
+   Root cause, best I could pin down without server-side access to
+   Streamlit's client-side markdown renderer: multi-line, deeply-indented
+   triple-quoted HTML strings passed to `st.markdown()` get misread as a
+   markdown indented code block once real (arbitrary, uncontrolled) review
+   text is interpolated in — the same pattern rendered fine elsewhere
+   (`signal_banner`, `pipeline_flow`) as long as the interpolated content
+   was our own controlled strings. Fixed by rebuilding every dynamic HTML
+   fragment as a single unindented line (no embedded newlines at all) and
+   HTML-escaping `review_text` before interpolating it. **If you add any
+   new `st.markdown(..., unsafe_allow_html=True)` call anywhere in this
+   app, follow that same single-line pattern, especially if real review
+   text or any other uncontrolled string is going into it** — it's cheap
+   insurance against the same bug reappearing somewhere new.
+
+Both are fixed and re-verified with real screenshots (before/after) and one
+round of clicking through the Issue Explorer filters interactively (not
+just loading the page) to confirm the segmented control's actual filtering
+behavior still works under the new styling, not just its appearance.
+
+## Verification this session
+
+- `streamlit.testing.v1.AppTest` on all four pages + the dashboard entry
+  point — zero exceptions, before and after the two bug fixes.
+- Headless `streamlit run` + `curl` — HTTP 200, clean log.
+- Playwright screenshots of all four pages in a real headless browser.
+- Interactive check: toggled rating filter chips off/on and switched sort
+  order on Issue Explorer, confirmed the review count and card order
+  actually updated correctly, not just that the page didn't crash.
+
+## What I did not touch
+
+- No analytical logic changed — `src/*.py`, `data/`, and the notebooks are
+  untouched this session.
+- Did not fix `app_performance` / `unexplained_deduction` precision — still
+  flagged `needs_regex_fix`, exactly as the previous session left them. The
+  Methodology page's validation table still surfaces this correctly.
+- Did not visually check the app below ~1100px viewport height or on a
+  narrow/mobile width — only checked at 1440×1100. The brief asked for
+  "reasonably usable, not broken" at smaller sizes; that's unverified.
+
+## Next steps
+
+1. Same open item as last session: fix the `app_performance` and
+   `unexplained_deduction` regex, re-validate, re-run
+   `validation_status_table()` immediately after to confirm the number
+   that lands in the primary CSV matches what was just annotated.
+2. Spot-check the app at a narrow/mobile viewport width — this session only
+   verified desktop (1440px).
+3. If Streamlit gets upgraded, re-inspect the DOM for `stButtonGroup` and
+   `stMultiSelectTagsContainer` before assuming the CSS selectors in
+   `theme.py` still match — see the bug writeup above.
+
+---
+
 
 ## ⚠️ Read this first: precision numbers in the previous handoff were wrong
 

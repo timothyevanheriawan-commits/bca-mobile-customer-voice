@@ -1,0 +1,23 @@
+# Native Streamlit theme for the Customer Voice Ledger dashboard.
+#
+# app/utils/theme.py handles the custom CSS (fonts, ledger tables, the
+# stamp component), but native widgets - selectbox, segmented control,
+# sliders, the sidebar chrome - are painted by Streamlit itself before
+# that CSS ever runs. Setting the palette here too means those widgets
+# match on first paint instead of flashing default Streamlit red/black
+# and getting overridden a moment later.
+
+[theme]
+base = "light"
+primaryColor = "#243F63"
+backgroundColor = "#FAFAF6"
+secondaryBackgroundColor = "#E9F0E1"
+textColor = "#1B2A20"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+showSidebarNavigation = true
+
+[browser]
+gatherUsageStats = false

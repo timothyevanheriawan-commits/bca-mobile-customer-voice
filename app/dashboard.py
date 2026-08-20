@@ -3,8 +3,9 @@
 Run with: streamlit run app/dashboard.py
 
 Follows the same st.navigation/st.Page pattern used in the Retention/RFM
-and TransJakarta dashboards - one entry point, thin, all real logic lives in
-app/components/*.py and is fed by the cached loaders in app/utils/data_loader.py.
+and TransJakarta dashboards - one entry point, thin, all real logic lives
+in app/components/*.py and is fed by the cached loaders in
+app/utils/data_loader.py.
 """
 
 from __future__ import annotations
@@ -24,8 +25,7 @@ from app.utils.formatting import format_count
 from app.utils.theme import COLORS, inject_css
 
 st.set_page_config(
-    page_title="BCA Mobile — Customer Voice",
-    page_icon="\U0001F4EC",
+    page_title="BCA Mobile Customer Voice Ledger",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -51,30 +51,35 @@ def _methodology_page():
     methodology.render(TABLES)
 
 
-# --- Sidebar: compact product identity, above the nav list --------------
-# Built as single-line fragments on purpose - a multi-line indented HTML
-# string gets misread as a markdown code block by the client-side renderer.
+# --- Sidebar: cover-sheet identity block, above the nav list ------------
+# Built as single-line fragments on purpose: a multi-line indented HTML
+# string gets misread as a markdown code block by the client-side
+# renderer, which is what caused a stray literal "</div>" to leak into
+# the Issue Explorer cards in an earlier pass. Keeping every fragment on
+# one line, and avoiding CSS custom properties inside inline style
+# attributes (they can trip the HTML sanitizer the same way), is the
+# actual fix - see issue_explorer.py for where that bug lived.
 with st.sidebar:
     brand_html = (
         '<div style="display:flex;align-items:center;gap:10px;">'
-        f'<div style="width:32px;height:32px;border-radius:8px;background:{COLORS["primary"]};'
+        f'<div style="width:32px;height:32px;border-radius:2px;background:{COLORS["primary"]};'
         'color:#fff;display:flex;align-items:center;justify-content:center;'
-        'font-family:\'Inter\',sans-serif;font-weight:800;font-size:0.95rem;">B</div>'
-        f'<div style="font-family:\'Inter\',sans-serif;font-weight:800;font-size:0.95rem;'
+        'font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.95rem;">B</div>'
+        f'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.95rem;'
         f'color:{COLORS["ink"]};line-height:1.15;">BCA Mobile</div>'
         '</div>'
-        '<div class="ci-breadcrumb" style="margin-top:12px;margin-bottom:0;">Customer Intelligence</div>'
-        f'<div style="font-family:\'Inter\',sans-serif;font-weight:600;font-size:0.84rem;'
-        f'color:{COLORS["muted"]};margin-top:1px;">Customer Voice</div>'
+        '<div class="lg-eyebrow" style="margin-top:12px;margin-bottom:0;">Ledger No. CV-2026-08</div>'
+        f'<div style="font-family:\'IBM Plex Sans\',sans-serif;font-weight:600;font-size:0.84rem;'
+        f'color:{COLORS["muted"]};margin-top:1px;">Customer Voice Audit</div>'
     )
     st.markdown(brand_html, unsafe_allow_html=True)
     st.divider()
 
 pages = [
-    st.Page(_overview_page, title="Overview", icon="\U0001F4CB", default=True),
-    st.Page(_trends_page, title="Trends", icon="\U0001F4C8"),
-    st.Page(_explorer_page, title="Issue Explorer", icon="\U0001F50D"),
-    st.Page(_methodology_page, title="Methodology", icon="\U0001F4D0"),
+    st.Page(_overview_page, title="Overview", default=True),
+    st.Page(_trends_page, title="Trends"),
+    st.Page(_explorer_page, title="Issue Explorer"),
+    st.Page(_methodology_page, title="Methodology"),
 ]
 
 nav = st.navigation(pages)
@@ -84,11 +89,11 @@ with st.sidebar:
     st.divider()
     review_count = format_count(len(TABLES["reviews"]))
     status_html = (
-        '<div class="ci-breadcrumb" style="margin-bottom:2px;">Dataset</div>'
-        f'<div style="font-family:\'Inter\',sans-serif;font-weight:600;font-size:0.84rem;'
+        '<div class="lg-eyebrow" style="margin-bottom:2px;">Dataset</div>'
+        f'<div style="font-family:\'IBM Plex Sans\',sans-serif;font-weight:600;font-size:0.84rem;'
         f'color:{COLORS["ink"]};">Google Play Reviews</div>'
-        f'<div class="ci-mono" style="font-size:0.74rem;color:{COLORS["success"]};margin-top:4px;">'
-        f'&#9679; Analysis ready &middot; {review_count} reviews</div>'
+        f'<div class="lg-mono" style="font-size:0.74rem;color:{COLORS["success"]};margin-top:4px;">'
+        f'Ready for review &middot; {review_count} reviews logged</div>'
     )
     st.markdown(status_html, unsafe_allow_html=True)
 

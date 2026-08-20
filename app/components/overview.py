@@ -2,11 +2,11 @@
 
 The priority table here is rendered directly from
 `src.prioritization.build_priority_table` - not a hardcoded summary - so a
-category sitting at "needs_regex_fix" shows up as exactly that, in red, with
-its caveat text, rather than silently looking as solid as a validated one.
-The top row of that same table drives the hero signal banner, so the page's
-single most important claim can never drift out of sync with the table
-underneath it.
+category sitting at "needs_regex_fix" shows up as exactly that, stamped
+red, with its caveat text, rather than silently looking as solid as a
+validated one. The top row of that same table drives the hero callout, so
+the page's single most important claim can never drift out of sync with
+the table underneath it.
 """
 
 from __future__ import annotations
@@ -21,10 +21,9 @@ from app.utils.formatting import (
     tier_color,
     tier_tone,
     trend_arrow,
-    validation_color,
     validation_tone,
 )
-from app.utils.theme import COLORS, breadcrumb, metric_row, signal_banner, tag
+from app.utils.theme import COLORS, breadcrumb, callout, ledger_table, metric_row, stamp, tag
 
 
 def render(tables: dict) -> None:
@@ -34,26 +33,39 @@ def render(tables: dict) -> None:
     st.markdown(breadcrumb("Overview"), unsafe_allow_html=True)
     st.title("Customer Voice")
     st.markdown(
-        '<p class="ci-subtitle">What customers are hitting, ranked by what to fix first.</p>',
+        '<p class="lg-subtitle">A working ledger of what BCA Mobile customers are '
+        'hitting on Google Play, tallied by issue and ranked by what to fix first.</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="ci-context">Google Play Reviews &middot; {len(df):,} analyzed &middot; '
-        f'{df["review_date"].min().strftime("%b %Y")}&ndash;{df["review_date"].max().strftime("%b %Y")}</div>',
+        f'<div class="lg-context">Google Play Reviews &middot; {len(df):,} logged &middot; '
+        f'{df["review_date"].min().strftime("%b %Y")} to '
+        f'{df["review_date"].max().strftime("%b %Y")}</div>',
         unsafe_allow_html=True,
     )
+    st.write("")
+    st.markdown(
+        '<p class="lg-body">Every entry below comes from a real review, tagged by a '
+        'plain regex rule a person can read (see Methodology), then checked by hand '
+        'before it is trusted. This is not a sentiment score. It is a count of specific, '
+        'named problems, so the question this page answers is narrow and concrete: '
+        'of everything customers complained about, what shows up most, and is it '
+        'getting worse.</p>',
+        unsafe_allow_html=True,
+    )
+
     st.write("")
 
     # --- Top priority signal --------------------------------------------
     top = priority_df.iloc[0]
     top_arrow = trend_arrow(top["trend"])
     detail = (
-        f"{format_pct(top['share_of_negative_reviews'])} of negative reviews &middot; "
-        f"{format_count(top['n_mentions'])} mentions &middot; trend {top_arrow} {top['trend']}"
+        f"{format_pct(top['share_of_negative_reviews'])} of negative reviews, "
+        f"{format_count(top['n_mentions'])} mentions, trend {top_arrow} {top['trend']}."
     )
     if top["caveat"]:
-        detail += f" &mdash; {top['caveat']}"
-    signal_banner(
+        detail += f" Note: {top['caveat']}"
+    callout(
         label=f"Top priority signal &middot; {top['priority_tier']}",
         title=issue_label(top["issue"]),
         detail=detail,
@@ -63,7 +75,9 @@ def render(tables: dict) -> None:
     st.write("")
 
     # --- Key metrics -------------------------------------------------------
-    negative = (df["rating_group"] == "negative").sum()
+    negative = int((df["rating_group"] == "negative").sum())
+    tagged = int((df["issue_count"] > 0).sum())
+    multi_issue = int((df["issue_count"] > 1).sum())
     n_high = int((priority_df["priority_tier"] == "High").sum())
     n_needs_fix = int((priority_df["validation_status"] == "needs_regex_fix").sum())
 
@@ -78,45 +92,49 @@ def render(tables: dict) -> None:
         },
     ])
 
-    st.divider()
-    st.subheader("Priority table")
+    st.write("")
     st.markdown(
-        '<p class="ci-subtitle">Ranked High &rarr; Low. A category is High if it\u2019s a '
+        '<p class="lg-body">Ratings here are polarized rather than mediocre: most '
+        f'reviews land at either end of the scale, not the middle. {format_pct(negative / len(df))} '
+        'of all reviews are negative (1 to 2 stars), and roughly one in ten tagged reviews '
+        f'names more than one problem at once ({format_count(multi_issue)} of {format_count(tagged)} '
+        'tagged reviews), which is why the issue counts below do not sum to the negative '
+        'review total.</p>',
+        unsafe_allow_html=True,
+    )
+
+    st.write("")
+    st.subheader("Ratings, at a glance")
+    st.markdown(
+        '<p class="lg-subtitle">Count of reviews at each star rating. The dip in the '
+        'middle is the tell: customers who show up to leave a review are mostly either '
+        'satisfied or actively stuck on something, not lukewarm.</p>',
+        unsafe_allow_html=True,
+    )
+    _rating_distribution_chart(df)
+
+    st.divider()
+    st.subheader("Priority ledger")
+    st.markdown(
+        '<p class="lg-subtitle">Ranked high to low. A category is High if it is a '
         'money-affecting issue above the frequency floor, or any issue above the floor '
-        'that\u2019s trending up. See <code>src/prioritization.py</code> for the exact rule.</p>',
+        'that is trending up. See <code>src/prioritization.py</code> for the exact rule. '
+        'A red validation stamp means the count next to it is provisional: read the caveat '
+        'before repeating the number elsewhere.</p>',
         unsafe_allow_html=True,
     )
     st.write("")
 
-    for _, row in priority_df.iterrows():
-        status = row["validation_status"]
-        status_label = status if isinstance(status, str) else "unvalidated"
-        arrow = trend_arrow(row["trend"])
-        precision_txt = (
-            f" ({row['precision']:.2f})"
-            if row.get("precision") == row.get("precision") and row.get("precision") is not None
-            else ""
-        )
-
-        cols = st.columns([2.8, 1, 1.2, 1.3, 1.4, 1.7])
-        cols[0].markdown(f"**{issue_label(row['issue'])}**")
-        cols[1].markdown(tag(row["priority_tier"], tier_tone(row["priority_tier"])), unsafe_allow_html=True)
-        cols[2].markdown(f'<span class="ci-mono">{format_count(row["n_mentions"])}</span> mentions', unsafe_allow_html=True)
-        cols[3].markdown(f'<span class="ci-mono">{format_pct(row["share_of_negative_reviews"])}</span> negatives', unsafe_allow_html=True)
-        cols[4].markdown(f"trend {arrow} {row['trend']}")
-        cols[5].markdown(
-            tag(f"{status_label}{precision_txt}", validation_tone(status_label)),
-            unsafe_allow_html=True,
-        )
-        if row["caveat"]:
-            cols[0].markdown(
-                f'<div style="font-size:0.78rem;color:{COLORS["warning"]};margin-top:2px;">&#9888; {row["caveat"]}</div>',
-                unsafe_allow_html=True,
-            )
-        st.markdown(f'<hr style="margin:6px 0;border-color:{COLORS["border"]};">', unsafe_allow_html=True)
+    _priority_ledger(priority_df)
 
     st.write("")
     st.subheader("Share of negative reviews, by issue")
+    st.markdown(
+        '<p class="lg-subtitle">What fraction of unhappy reviews mention each problem. '
+        'Bars are colored by priority tier, the same as the ledger above, so the two '
+        'views read as one argument rather than two separate charts.</p>',
+        unsafe_allow_html=True,
+    )
 
     chart_df = priority_df.sort_values("share_of_negative_reviews", ascending=True)
     bar_colors = [tier_color(t) for t in chart_df["priority_tier"]]
@@ -134,10 +152,71 @@ def render(tables: dict) -> None:
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color=COLORS["ink"], size=12),
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=12),
         margin=dict(l=10, r=40, t=10, b=10),
-        xaxis=dict(tickformat=".0%", gridcolor=COLORS["border"]),
+        xaxis=dict(tickformat=".0%", gridcolor=COLORS["rule"]),
         yaxis=dict(gridcolor="rgba(0,0,0,0)"),
         height=420,
     )
     st.plotly_chart(fig, width="stretch")
+
+
+def _rating_distribution_chart(df) -> None:
+    counts = df["rating"].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
+    star_colors = {
+        1: COLORS["danger"], 2: COLORS["danger"],
+        3: COLORS["warning"],
+        4: COLORS["faint"], 5: COLORS["faint"],
+    }
+    fig = go.Figure(
+        go.Bar(
+            x=[f"{s} star" for s in counts.index],
+            y=counts.values,
+            marker_color=[star_colors[s] for s in counts.index],
+            text=[f"{v:,}" for v in counts.values],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=12),
+        margin=dict(l=10, r=10, t=10, b=10),
+        yaxis=dict(gridcolor=COLORS["rule"], title="Reviews"),
+        xaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        height=280,
+        showlegend=False,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+
+def _priority_ledger(priority_df) -> None:
+    headers = ["No.", "Issue", "Tier", "Mentions", "Share of negatives", "Trend", "Validation"]
+    rows = []
+    for i, (_, row) in enumerate(priority_df.iterrows(), start=1):
+        status = row["validation_status"]
+        status_label = status if isinstance(status, str) else "unvalidated"
+        arrow = trend_arrow(row["trend"])
+        precision_txt = (
+            f" ({row['precision']:.2f})"
+            if row.get("precision") == row.get("precision") and row.get("precision") is not None
+            else ""
+        )
+        issue_cell = f"<strong>{issue_label(row['issue'])}</strong>"
+        if row["caveat"]:
+            issue_cell += f'<span class="lg-caveat">{row["caveat"]}</span>'
+
+        rows.append([
+            f"{i:02d}",
+            issue_cell,
+            tag(row["priority_tier"], tier_tone(row["priority_tier"])),
+            format_count(row["n_mentions"]),
+            format_pct(row["share_of_negative_reviews"]),
+            f"{arrow} {row['trend']}",
+            stamp(f"{status_label}{precision_txt}", validation_tone(status_label)),
+        ])
+
+    ledger_table(
+        headers, rows,
+        col_classes=["lg-num", "", "", "lg-right", "lg-right", "lg-right", ""],
+    )

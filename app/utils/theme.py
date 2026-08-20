@@ -1,15 +1,23 @@
-"""Design tokens, CSS injection, and small shared HTML components.
+"""Design tokens, CSS injection, and shared HTML fragments.
 
-Direction: "Customer Intelligence Console" — a cool-neutral banking
-analytics workspace, not a report or a generic Streamlit dashboard. Reviews
-become issue signals, signals become priorities, priorities become evidence
-a reader can check for themselves. Blue carries navigation/identity, red /
-amber / green are reserved strictly for severity, trend, and validation
-confidence so they keep real meaning instead of decorating every element.
+Direction: "Audit Ledger". This dashboard is not a product analytics
+surface, it is a workpaper: raw complaints get logged, counted, and
+checked before anyone is allowed to act on the numbers. The visual
+language borrows from two real objects rather than from a generic
+dashboard template: a green-bar accounting ledger pad (alternating pale
+green row bands in every tabular section) and a rubber ink stamp (the
+validation status marker, since "validated" or "needs regex fix" is
+literally an auditor's sign-off on a claim). Both are used exactly once
+as the signature move; everything else stays quiet paper-and-ink so the
+stamp and the ledger bands keep their weight.
 
-Every page pulls its colors, spacing, and shared HTML fragments (metric
-rows, tags, the pipeline flow) from here rather than hardcoding hex values
-or writing one-off markup — that's the point of centralizing this module.
+Ink and stamp colors are reserved strictly for validation confidence,
+priority tier, and trend direction. Nothing else on the page borrows
+them, so a red stamp always means the same thing wherever it appears.
+
+Every page pulls colors, spacing, and shared HTML fragments from here
+rather than hardcoding hex values or writing one-off markup, so a palette
+or spacing change only has to happen in one place.
 """
 
 from __future__ import annotations
@@ -21,36 +29,36 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 
 COLORS = {
-    # Surfaces
-    "bg": "#F5F7FA",
+    # Surfaces - off-white ledger paper, not the warm cream default.
+    "bg": "#FAFAF6",
     "surface": "#FFFFFF",
-    "surface_soft": "#F8FAFC",
-    # Text
-    "ink": "#172033",
-    "muted": "#667085",
-    "faint": "#98A2B3",
-    # Border
-    "border": "#E1E7EF",
-    # Brand / interaction
-    "primary": "#0A4FA3",
-    "interact": "#1677D2",
-    "soft_blue": "#EAF2FB",
-    "navy": "#102A43",
-    # Semantic — reserved for severity / trend / confidence, nothing else
-    "danger": "#C1352E",
-    "danger_soft": "#FBEAEA",
-    "warning": "#B7791F",
-    "warning_soft": "#FBF3E3",
-    "success": "#1E8E5A",
-    "success_soft": "#E9F6EF",
-    "neutral_soft": "#EEF1F5",
+    "band": "#E9F0E1",       # pale ledger-green row band
+    "band_strong": "#DCE7D1",
+    # Text - deep green-black ink rather than pure black.
+    "ink": "#1B2A20",
+    "muted": "#5B6B5D",
+    "faint": "#93A392",
+    # Rule / border - soft green-grey, like ruled ledger lines.
+    "rule": "#C9D3C0",
+    "rule_strong": "#1B2A20",
+    # Brand / interaction - ballpoint-pen blue, used sparingly.
+    "primary": "#243F63",
+    "interact": "#2E5488",
+    "soft_blue": "#E7ECF3",
+    # Semantic ink - reserved for stamps, tier, and trend only.
+    "danger": "#A23B2C",
+    "danger_soft": "#F4E4DF",
+    "warning": "#93641C",
+    "warning_soft": "#F1E7D2",
+    "success": "#2E6B49",
+    "success_soft": "#E1EDE2",
+    "neutral_soft": "#EEF1EA",
 }
 
-FONT_HEADING = "'Inter', sans-serif"
-FONT_BODY = "'Inter', sans-serif"
+FONT_HEADING = "'Space Grotesk', sans-serif"
+FONT_BODY = "'IBM Plex Sans', sans-serif"
 FONT_MONO = "'IBM Plex Mono', monospace"
 
-# Backwards-compatible aliases (formatting.py and components read these).
 TIER_COLORS = {
     "High": COLORS["danger"],
     "Medium": COLORS["warning"],
@@ -64,9 +72,9 @@ VALIDATION_COLORS = {
     "unvalidated": COLORS["faint"],
 }
 
-# 1-2 stars read as risk signal, 3 as a caution signal, 4-5 as settled —
-# this is the one place star rating maps to color, reused by the segmented
-# rating filter and the evidence cards so they never drift apart.
+# 1-2 stars read as risk signal, 3 as caution, 4-5 as settled. The one
+# place star rating maps to color, reused by the rating filter and the
+# evidence cards so they never drift apart.
 RATING_TONES = {
     1: "danger", 2: "danger",
     3: "warning",
@@ -79,7 +87,7 @@ def rating_tone(rating: int) -> str:
 
 
 def tone_colors(tone: str) -> tuple[str, str]:
-    """(foreground, soft-background) for a semantic tone name."""
+    """(ink color, soft background) for a semantic tone name."""
     return {
         "danger": (COLORS["danger"], COLORS["danger_soft"]),
         "warning": (COLORS["warning"], COLORS["warning_soft"]),
@@ -97,7 +105,7 @@ def inject_css() -> None:
     st.markdown(
         f"""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
         html, body, [class*="css"] {{
             font-family: {FONT_BODY};
@@ -116,31 +124,31 @@ def inject_css() -> None:
         h1, h2, h3, h4 {{
             font-family: {FONT_HEADING};
             color: {COLORS['ink']};
-            letter-spacing: -0.015em;
+            letter-spacing: -0.01em;
         }}
 
-        h1 {{ font-size: 1.9rem; font-weight: 800; margin-bottom: 0.15rem; }}
-        h2 {{ font-size: 1.25rem; font-weight: 700; }}
-        h3 {{ font-size: 1.1rem; font-weight: 700; }}
+        h1 {{ font-size: 1.85rem; font-weight: 700; margin-bottom: 0.15rem; }}
+        h2 {{ font-size: 1.2rem; font-weight: 600; }}
+        h3 {{ font-size: 1.05rem; font-weight: 600; }}
 
         p, span, div, label {{ font-family: {FONT_BODY}; }}
 
-        code, .ci-mono {{
+        code, .lg-mono {{
             font-family: {FONT_MONO} !important;
         }}
 
         hr {{
-            border-color: {COLORS['border']};
+            border-color: {COLORS['rule']};
             margin: 1.1rem 0;
         }}
 
         /* ---------------------------------------------------------- */
-        /* Sidebar / product shell                                    */
+        /* Sidebar                                                    */
         /* ---------------------------------------------------------- */
 
         [data-testid="stSidebar"] {{
             background-color: {COLORS['surface']};
-            border-right: 1px solid {COLORS['border']};
+            border-right: 1px solid {COLORS['rule']};
         }}
 
         [data-testid="stSidebar"] .block-container {{
@@ -152,10 +160,10 @@ def inject_css() -> None:
         }}
 
         [data-testid="stSidebarNavLink"] {{
-            border-radius: 8px;
+            border-radius: 3px;
             font-family: {FONT_HEADING};
             font-weight: 600;
-            font-size: 0.88rem;
+            font-size: 0.87rem;
             color: {COLORS['muted']};
             padding: 0.4rem 0.6rem;
             margin-bottom: 2px;
@@ -163,26 +171,27 @@ def inject_css() -> None:
         }}
 
         [data-testid="stSidebarNavLink"]:hover {{
-            background-color: {COLORS['surface_soft']};
+            background-color: {COLORS['neutral_soft']};
         }}
 
         [data-testid="stSidebarNavLink"][aria-current="page"] {{
-            background-color: {COLORS['soft_blue']};
-            color: {COLORS['interact']};
+            background-color: {COLORS['band']};
+            color: {COLORS['ink']};
+            border-left: 3px solid {COLORS['ink']};
         }}
 
         [data-testid="stSidebarNavLink"][aria-current="page"] span {{
-            color: {COLORS['interact']};
+            color: {COLORS['ink']};
         }}
 
         /* ---------------------------------------------------------- */
-        /* Metric widgets (used sparingly; most metrics use ci-metric) */
+        /* Native metric widget                                       */
         /* ---------------------------------------------------------- */
 
         [data-testid="stMetric"] {{
             background-color: {COLORS['surface']};
-            border: 1px solid {COLORS['border']};
-            border-radius: 10px;
+            border: 1px solid {COLORS['rule']};
+            border-radius: 4px;
             padding: 12px 16px;
         }}
 
@@ -191,7 +200,7 @@ def inject_css() -> None:
             font-weight: 600;
             font-size: 0.72rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             color: {COLORS['muted']};
         }}
 
@@ -202,13 +211,12 @@ def inject_css() -> None:
         }}
 
         /* ---------------------------------------------------------- */
-        /* Controls — pull selects / multiselects / segmented control */
-        /* toward one consistent, compact visual language              */
+        /* Controls                                                    */
         /* ---------------------------------------------------------- */
 
         [data-baseweb="select"] > div {{
-            border-radius: 8px;
-            border-color: {COLORS['border']};
+            border-radius: 3px;
+            border-color: {COLORS['rule']};
             background-color: {COLORS['surface']};
             font-family: {FONT_BODY};
         }}
@@ -216,7 +224,7 @@ def inject_css() -> None:
         [data-testid="stMultiSelectTagsContainer"] span[data-tag] {{
             background-color: {COLORS['soft_blue']} !important;
             color: {COLORS['interact']} !important;
-            border-radius: 6px !important;
+            border-radius: 3px !important;
         }}
 
         [data-testid="stMultiSelectTagsContainer"] span[data-tag] button {{
@@ -226,186 +234,264 @@ def inject_css() -> None:
         [data-testid="stButtonGroup"] button {{
             font-family: {FONT_HEADING} !important;
             font-size: 0.82rem !important;
-            border-radius: 999px !important;
-            border-color: {COLORS['border']} !important;
+            border-radius: 3px !important;
+            border-color: {COLORS['rule']} !important;
             color: {COLORS['muted']} !important;
             background-color: {COLORS['surface']} !important;
         }}
 
         [data-testid="stButtonGroup"] button[data-selected="true"] {{
-            background-color: {COLORS['soft_blue']} !important;
-            border-color: {COLORS['soft_blue']} !important;
-            color: {COLORS['interact']} !important;
+            background-color: {COLORS['band']} !important;
+            border-color: {COLORS['ink']} !important;
+            color: {COLORS['ink']} !important;
         }}
 
         [data-testid="stButtonGroup"] button[data-selected="true"] p {{
-            color: {COLORS['interact']} !important;
+            color: {COLORS['ink']} !important;
         }}
 
         button[kind="secondary"], button[kind="primary"] {{
-            border-radius: 8px;
+            border-radius: 3px;
             font-family: {FONT_HEADING};
             font-weight: 600;
         }}
 
         [data-testid="stAlert"] {{
-            border-radius: 10px;
-            font-size: 0.88rem;
+            border-radius: 4px;
+            font-family: {FONT_BODY};
+            border: 1px solid {COLORS['rule']};
         }}
 
         /* ---------------------------------------------------------- */
-        /* Shared HTML fragments (see helper functions below)         */
+        /* Ledger typography fragments                                */
         /* ---------------------------------------------------------- */
 
-        .ci-breadcrumb {{
-            font-family: {FONT_HEADING};
-            font-weight: 600;
-            font-size: 0.74rem;
+        .lg-eyebrow {{
+            font-family: {FONT_MONO};
+            font-weight: 500;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            letter-spacing: 0.07em;
-            color: {COLORS['faint']};
+            color: {COLORS['muted']};
             margin-bottom: 6px;
         }}
 
-        .ci-subtitle {{
+        .lg-subtitle {{
+            font-size: 0.98rem;
             color: {COLORS['muted']};
-            font-size: 0.92rem;
-            margin-top: 2px;
-            margin-bottom: 0;
             max-width: 62ch;
+            line-height: 1.5;
         }}
 
-        .ci-context {{
+        .lg-context {{
             font-family: {FONT_MONO};
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             color: {COLORS['faint']};
             margin-top: 6px;
         }}
 
-        .ci-panel {{
-            background-color: {COLORS['surface_soft']};
-            border-radius: 12px;
-            padding: 16px 18px;
+        .lg-body {{
+            font-size: 0.92rem;
+            color: {COLORS['ink']};
+            line-height: 1.6;
+            max-width: 68ch;
         }}
 
-        .ci-card {{
+        .lg-body strong {{ color: {COLORS['ink']}; }}
+
+        /* ---------------------------------------------------------- */
+        /* Panels and metrics                                         */
+        /* ---------------------------------------------------------- */
+
+        .lg-panel {{
             background-color: {COLORS['surface']};
-            border: 1px solid {COLORS['border']};
-            border-radius: 10px;
+            border: 1px solid {COLORS['rule']};
+            border-radius: 4px;
             padding: 14px 16px;
         }}
 
-        .ci-tag {{
-            display: inline-flex;
-            align-items: center;
-            font-family: {FONT_HEADING};
-            font-weight: 600;
-            font-size: 0.7rem;
-            padding: 3px 9px;
-            border-radius: 999px;
-            letter-spacing: 0.01em;
-        }}
-
-        .ci-metric-row {{
+        .lg-metric-row {{
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }}
 
-        .ci-metric {{
-            flex: 1 1 140px;
+        .lg-metric {{
+            flex: 1 1 150px;
             background-color: {COLORS['surface']};
-            border: 1px solid {COLORS['border']};
-            border-radius: 10px;
+            border: 1px solid {COLORS['rule']};
+            border-radius: 4px;
             padding: 12px 16px;
         }}
 
-        .ci-metric.ci-metric-hero {{
-            background-color: {COLORS['soft_blue']};
-            border-color: {COLORS['soft_blue']};
+        .lg-metric.lg-metric-hero {{
+            background-color: {COLORS['band']};
+            border-color: {COLORS['band_strong']};
         }}
 
-        .ci-metric-value {{
+        .lg-metric-value {{
             font-family: {FONT_MONO};
             font-weight: 600;
-            font-size: 1.55rem;
+            font-size: 1.5rem;
             color: {COLORS['ink']};
             line-height: 1.15;
         }}
 
-        .ci-metric-label {{
+        .lg-metric-label {{
             font-family: {FONT_HEADING};
             font-weight: 600;
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: {COLORS['muted']};
             margin-top: 3px;
         }}
 
-        .ci-metric-sub {{
+        .lg-metric-sub {{
             font-family: {FONT_MONO};
             font-size: 0.74rem;
             color: {COLORS['faint']};
             margin-top: 2px;
         }}
 
-        .ci-signal {{
+        /* ---------------------------------------------------------- */
+        /* Callout - top priority signal / definition box              */
+        /* ---------------------------------------------------------- */
+
+        .lg-callout {{
             display: flex;
             gap: 14px;
             align-items: flex-start;
-            border-radius: 12px;
+            border-radius: 3px;
             padding: 16px 18px;
             border-left: 4px solid transparent;
         }}
 
-        .ci-signal-label {{
-            font-family: {FONT_HEADING};
-            font-weight: 700;
-            font-size: 0.72rem;
+        .lg-callout-label {{
+            font-family: {FONT_MONO};
+            font-weight: 600;
+            font-size: 0.7rem;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.07em;
         }}
 
-        .ci-signal-title {{
+        .lg-callout-title {{
             font-family: {FONT_HEADING};
             font-weight: 700;
             font-size: 1.05rem;
             color: {COLORS['ink']};
-            margin-top: 2px;
-        }}
-
-        .ci-signal-detail {{
-            font-size: 0.86rem;
-            color: {COLORS['muted']};
             margin-top: 3px;
         }}
 
-        /* Pipeline flow — Methodology page signature element */
-        .ci-flow {{
+        .lg-callout-detail {{
+            font-size: 0.86rem;
+            color: {COLORS['muted']};
+            margin-top: 4px;
+            line-height: 1.5;
+        }}
+
+        /* ---------------------------------------------------------- */
+        /* Stamp - the signature validation / status marker            */
+        /* ---------------------------------------------------------- */
+
+        .lg-stamp {{
+            display: inline-block;
+            font-family: {FONT_MONO};
+            font-weight: 600;
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border: 1.5px solid currentColor;
+            border-radius: 2px;
+            box-shadow: inset 0 0 0 2px {COLORS['surface']}, inset 0 0 0 3px currentColor;
+            transform: rotate(-1.2deg);
+            white-space: nowrap;
+        }}
+
+        /* ---------------------------------------------------------- */
+        /* Ledger tables - alternating green-bar rows, real <table>    */
+        /* ---------------------------------------------------------- */
+
+        .lg-ledger {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.86rem;
+        }}
+
+        .lg-ledger th {{
+            text-align: left;
+            font-family: {FONT_MONO};
+            font-weight: 500;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: {COLORS['muted']};
+            border-bottom: 2px solid {COLORS['rule_strong']};
+            padding: 6px 10px;
+        }}
+
+        .lg-ledger td {{
+            padding: 10px 10px;
+            border-bottom: 1px solid {COLORS['rule']};
+            vertical-align: top;
+            color: {COLORS['ink']};
+        }}
+
+        .lg-ledger tr:nth-child(even) td {{
+            background-color: {COLORS['band']};
+        }}
+
+        .lg-ledger .lg-num {{
+            font-family: {FONT_MONO};
+            color: {COLORS['muted']};
+            text-align: right;
+            width: 2.4em;
+        }}
+
+        .lg-ledger .lg-right {{
+            font-family: {FONT_MONO};
+            text-align: right;
+            white-space: nowrap;
+        }}
+
+        .lg-ledger .lg-caveat {{
+            font-size: 0.78rem;
+            color: {COLORS['warning']};
+            margin-top: 3px;
+            display: block;
+        }}
+
+        /* ---------------------------------------------------------- */
+        /* Pipeline flow - Methodology signature element                */
+        /* ---------------------------------------------------------- */
+
+        .lg-flow {{
             display: flex;
             align-items: stretch;
             gap: 0;
             flex-wrap: wrap;
         }}
 
-        .ci-flow-step {{
+        .lg-flow-step {{
             flex: 1 1 160px;
             background-color: {COLORS['surface']};
-            border: 1px solid {COLORS['border']};
-            border-radius: 10px;
+            border-top: 3px solid {COLORS['ink']};
+            border-left: 1px solid {COLORS['rule']};
+            border-right: 1px solid {COLORS['rule']};
+            border-bottom: 1px solid {COLORS['rule']};
             padding: 12px 14px;
             position: relative;
         }}
 
-        .ci-flow-index {{
+        .lg-flow-index {{
             font-family: {FONT_MONO};
             font-size: 0.7rem;
-            color: {COLORS['interact']};
-            font-weight: 600;
+            color: {COLORS['muted']};
+            font-weight: 500;
         }}
 
-        .ci-flow-title {{
+        .lg-flow-title {{
             font-family: {FONT_HEADING};
             font-weight: 700;
             font-size: 0.92rem;
@@ -413,14 +499,14 @@ def inject_css() -> None:
             margin-top: 2px;
         }}
 
-        .ci-flow-desc {{
+        .lg-flow-desc {{
             font-size: 0.78rem;
             color: {COLORS['muted']};
             margin-top: 4px;
-            line-height: 1.35;
+            line-height: 1.4;
         }}
 
-        .ci-flow-arrow {{
+        .lg-flow-arrow {{
             display: flex;
             align-items: center;
             justify-content: center;
@@ -430,39 +516,53 @@ def inject_css() -> None:
             flex: 0 0 auto;
         }}
 
-        /* Evidence cards — Issue Explorer */
-        .ci-evidence {{
+        /* ---------------------------------------------------------- */
+        /* Evidence records - Issue Explorer                           */
+        /* ---------------------------------------------------------- */
+
+        .lg-evidence {{
             background-color: {COLORS['surface']};
-            border: 1px solid {COLORS['border']};
-            border-left: 3px solid var(--rail-color, {COLORS['border']});
-            border-radius: 8px;
+            border: 1px solid {COLORS['rule']};
+            border-radius: 3px;
             padding: 12px 16px;
             margin-bottom: 8px;
         }}
 
-        .ci-evidence-meta {{
+        .lg-evidence-meta {{
             display: flex;
             align-items: center;
             gap: 10px;
             font-family: {FONT_MONO};
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             color: {COLORS['faint']};
         }}
 
-        .ci-evidence-stars {{
+        .lg-evidence-stars {{
             font-size: 0.85rem;
             letter-spacing: 1px;
         }}
 
-        .ci-evidence-text {{
+        .lg-evidence-text {{
             font-size: 0.9rem;
             color: {COLORS['ink']};
             margin-top: 7px;
             line-height: 1.5;
         }}
 
-        .ci-evidence-tags {{
+        .lg-evidence-tags {{
             margin-top: 8px;
+        }}
+
+        .lg-tag {{
+            display: inline-flex;
+            align-items: center;
+            font-family: {FONT_HEADING};
+            font-weight: 600;
+            font-size: 0.68rem;
+            padding: 2px 8px;
+            border-radius: 2px;
+            letter-spacing: 0.01em;
+            margin-right: 4px;
         }}
         </style>
         """,
@@ -471,56 +571,57 @@ def inject_css() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Shared HTML fragments — every page builds tags/metrics/flow through these
-# so color and spacing decisions live in one place.
+# Shared HTML fragments
 # ---------------------------------------------------------------------------
 
 def breadcrumb(section: str) -> str:
-    return f'<div class="ci-breadcrumb">Customer Voice / {section}</div>'
+    return f'<div class="lg-eyebrow">Customer Voice Ledger / {section}</div>'
 
 
 def page_header(section: str, title: str, subtitle: str, context: str | None = None) -> None:
     html = breadcrumb(section)
     html += f'<h1>{title}</h1>'
-    html += f'<p class="ci-subtitle">{subtitle}</p>'
+    html += f'<p class="lg-subtitle">{subtitle}</p>'
     if context:
-        html += f'<div class="ci-context">{context}</div>'
+        html += f'<div class="lg-context">{context}</div>'
     st.markdown(html, unsafe_allow_html=True)
 
 
 def tag(text: str, tone: str) -> str:
     fg, bg = tone_colors(tone)
-    return f'<span class="ci-tag" style="color:{fg};background-color:{bg};">{text}</span>'
+    return f'<span class="lg-tag" style="color:{fg};background-color:{bg};">{text}</span>'
+
+
+def stamp(text: str, tone: str) -> str:
+    """The signature rubber-stamp marker used for validation status."""
+    fg, _ = tone_colors(tone)
+    return f'<span class="lg-stamp" style="color:{fg};">{text}</span>'
 
 
 def metric_row(items: list[dict]) -> None:
     """items: [{"label": str, "value": str, "sub": str|None, "hero": bool}]"""
     cells = []
     for item in items:
-        cls = "ci-metric ci-metric-hero" if item.get("hero") else "ci-metric"
-        sub = f'<div class="ci-metric-sub">{item["sub"]}</div>' if item.get("sub") else ""
+        cls = "lg-metric lg-metric-hero" if item.get("hero") else "lg-metric"
+        sub = f'<div class="lg-metric-sub">{item["sub"]}</div>' if item.get("sub") else ""
         cells.append(
             f'<div class="{cls}">'
-            f'<div class="ci-metric-value">{item["value"]}</div>'
-            f'<div class="ci-metric-label">{item["label"]}</div>'
+            f'<div class="lg-metric-value">{item["value"]}</div>'
+            f'<div class="lg-metric-label">{item["label"]}</div>'
             f'{sub}'
             f'</div>'
         )
-    st.markdown(f'<div class="ci-metric-row">{"".join(cells)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="lg-metric-row">{"".join(cells)}</div>', unsafe_allow_html=True)
 
 
-def signal_banner(label: str, title: str, detail: str, tone: str) -> None:
-    # Built as one unindented line on purpose - a multi-line indented HTML
-    # string here previously got misread as a markdown code block by the
-    # client-side renderer (see issue_explorer.py for the same fix and the
-    # full explanation). Every fragment builder below follows the same rule.
+def callout(label: str, title: str, detail: str, tone: str) -> None:
     fg, bg = tone_colors(tone)
     html = (
-        f'<div class="ci-signal" style="background-color:{bg}; border-left-color:{fg};">'
+        f'<div class="lg-callout" style="background-color:{bg}; border-left-color:{fg};">'
         f'<div>'
-        f'<div class="ci-signal-label" style="color:{fg};">{label}</div>'
-        f'<div class="ci-signal-title">{title}</div>'
-        f'<div class="ci-signal-detail">{detail}</div>'
+        f'<div class="lg-callout-label" style="color:{fg};">{label}</div>'
+        f'<div class="lg-callout-title">{title}</div>'
+        f'<div class="lg-callout-detail">{detail}</div>'
         f'</div>'
         f'</div>'
     )
@@ -532,12 +633,41 @@ def pipeline_flow(steps: list[tuple[str, str]]) -> None:
     parts = []
     for i, (title, desc) in enumerate(steps, start=1):
         parts.append(
-            f'<div class="ci-flow-step">'
-            f'<div class="ci-flow-index">{i:02d}</div>'
-            f'<div class="ci-flow-title">{title}</div>'
-            f'<div class="ci-flow-desc">{desc}</div>'
+            f'<div class="lg-flow-step">'
+            f'<div class="lg-flow-index">Entry {i:02d}</div>'
+            f'<div class="lg-flow-title">{title}</div>'
+            f'<div class="lg-flow-desc">{desc}</div>'
             f'</div>'
         )
         if i < len(steps):
-            parts.append('<div class="ci-flow-arrow">&rarr;</div>')
-    st.markdown(f'<div class="ci-flow">{"".join(parts)}</div>', unsafe_allow_html=True)
+            parts.append('<div class="lg-flow-arrow">&rarr;</div>')
+    st.markdown(f'<div class="lg-flow">{"".join(parts)}</div>', unsafe_allow_html=True)
+
+
+def ledger_table(headers: list[str], rows: list[list[str]], col_classes: list[str] | None = None) -> None:
+    """Render a full ledger table in one HTML block, zebra-striped by CSS.
+
+    Every cell is pre-formatted HTML (already escaped by the caller where
+    needed) so this function stays a pure layout helper. Built as one
+    st.markdown call per table rather than one call per row, both because
+    it renders faster and because it keeps each row's markup fully self
+    contained instead of relying on many small sequential calls.
+
+    col_classes, if given, must match len(headers) and assigns a CSS class
+    (e.g. "lg-num" or "lg-right") to every cell in that column - used for
+    right-aligning the numeric/mono columns without repeating inline style
+    on every row.
+    """
+    classes = col_classes or [""] * len(headers)
+    head = "".join(f"<th>{h}</th>" for h in headers)
+    body = "".join(
+        "<tr>" + "".join(
+            f'<td class="{cls}">{cell}</td>' if cls else f"<td>{cell}</td>"
+            for cell, cls in zip(row, classes)
+        ) + "</tr>"
+        for row in rows
+    )
+    st.markdown(
+        f'<table class="lg-ledger"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
+        unsafe_allow_html=True,
+    )

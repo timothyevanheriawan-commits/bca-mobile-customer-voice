@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Environment secrets, if any get added later
+.env
+
+# Streamlit local secrets (dashboard step)
+.streamlit/secrets.toml
+
+# Working notes, not for the finished portfolio repo
+HANDOFF.md

@@ -1,0 +1,51 @@
+review_id,rating,review_text,actual_issue
+e98d6633-6cda-4d26-b050-1bb042441a6e,2,"lama perbaikannya",maintenance_downtime
+24ed0d0b-b806-4b3f-ac36-a82af1c5f541,2,"ini kenapa gak bisa transfer antar bank ya? transaksi lain juga susah,sinyal juga mesti bagus",none
+90713f28-90b1-4ff5-96fb-55ed684cd149,1,"hp saya ngak bisa buat ubdet.bca",device_compatibility
+700e49e1-f310-474a-976e-ccd4765f5c3c,1,"jlek",none
+a35bc0a8-0629-476d-b77a-d759237229d4,1,"BCA Mobile nya minta Update tapi masa hp nya gak kompetible,saya udh update Android 11",device_compatibility
+a451cba3-f305-4a43-8f5d-caa364fada8b,2,"sering ganguan",app_performance
+7cb0f6f1-63b1-4e1c-bbfa-aa8183cd5109,1,"apk ny ga jelas, udah jaringan suka ilang""an, udah nyoba pake wifi pun kadang ga mau masuk apk ny, tolong lah diperbaiki lagi apk ny",app_performance
+376a7222-2583-488c-8a73-041dd72d2ccc,1,"aplikasi busuk logika butuh pulsa udah isi 5rb sms nya berulang pas di aplikasi di suruh ngirim sms lagi terakhir gak terdiri karna pulsa udah abis gak ngotak",none
+355ca7b5-3603-4510-912a-5efcbba3ba52,1,"bca mobile tidak bisa di update dengan alasan perangkat tidak kompatibel. sampek ganti hp sama aja. mohon di perbaiki lagi",device_compatibility
+8ef954bf-82c9-4e48-bd09-b501d4ca196a,2,"harus wifi only -_",none
+f80bc21a-4bd2-43bc-93a3-f1f2069951ad,1,"Tidak bisa di up date aplikasi BCA Mobile",app_performance
+07bcce49-89ea-468d-a1d0-f1a8053c2236,1,"kenapa gagal terus mau buka rekening baru lewat hp",app_performance
+c5b8b31c-847f-49fd-8d3e-0a5cc6b5607b,1,"menurut saya agak ribet ya aplikasi BCA mobile , dr cara memasukan norek baru, cek mutasi yg harus pake batasan tgl dan memasukan pin, dibanding aplikasi bank kuning , liat saldo, langsung deh berderet dibawah nya 5 transaksi terkahir kita, cek saldo tinggal scroll kebawah, TF antar bank simple ...maaf ya untuk aplikasi mobile banking BCA ketinggalan jauh dr bank lain...",ui_ux_regression
+ef75b704-fef7-4855-aabb-3379d0cadb82,1,"mana katanya pas buka rekening sapet vocher 100k dalam 14 hari mana sampe sekarang belum ada tuh vochernya masuk mana scam gausa bikin kaya gtu kalo ga di kirim",none
+e158f6b5-a3dd-4273-9b40-ab9bc187befc,1,"pencuri duit 4,6M ga dibalikin wkwk",none
+f5ba4b8b-55f1-4caa-a683-56ec337bf335,1,"Mau update bca mobile ga bisa karena hpnya jadul versi perangkat tidak mendukung...kesel banget jadi ga bisa pakai m-banking BCA lagi padahal semua transaksi disini...sungguh kecewa...😫😫😫",device_compatibility
+421be115-54c7-4c0f-a8df-55defb7449da,1,"g masuk diakal...masa pengembalian dana sampai 14 hari kerja ..itu pakai otak apa pakai dengkul jawaban nya tu....bukti transaksi ada,dari sistem mereka pun jelas ...tapi pengembalian selama itu....mendingan g usah pakai BCA...",none
+df16800d-3464-4e78-98a2-6e9990c697f1,1,"bca dikit dikit update",none
+b3faa02e-21fe-4971-97f5-d09f47d747c6,1,"saya baru download ini , dan saya mau buka rekening baru, tapi kenapa tidak bisa lanjut sa'at sudah kirim pesan dan masukan code pengguna, dua kali sayang proses buka rekening baru masih belum bisa lanjut setelah kirim pesan bebayar, mohon bantu solusi nya .!",app_performance
+cc70200f-948f-45ac-9a28-09a61a515fa8,1,"gajelas",none
+dc9dacda-88b4-4488-a059-d904994aa404,1,"masa iya di gua gak bisa downlod. di model hp CPH1729,, emng mbuttt ko",device_compatibility
+0c930e53-31ce-4d8c-ada2-db26a955754f,1,"pengen buat rekening xpresi tp pas mo foto ga bisa mlu, disuruh matiin developer mode pas dah matiin semua tetep ga bisa wae",face_verification_failure
+c6ad4914-91ab-46e6-a185-8124137c994f,1,"TARIK AJA UANG KITA SEMUA ... TRANSAKSI BURUK DI APLIKASI INI SANGAT SUSAH BUAT TRANSAKSI JARINGAN NYA MERAH TERUS, PADAHAL INTERNET KAMI STABIL & BAGUS.. MEMANG APLIKASI KEUANGAN BCA AJA YG SANGAT BURUK JELEK GAK BERKUALITAS.. APLIKASI KEUANGAN TERBURUK YG SAYA RASAKAN.. GANTI BANK AJA MENDING DARI PADA BEGINI TRANSAKSI SUSAHH GA BERES",app_performance
+7f95c1a8-b86c-4b59-9d2d-5bd7a861e581,1,"di-update malah keluar terusss... bikin gagal transaksi aja...",app_performance
+76681fe8-dcfa-4837-948e-40d6af792a47,2,"Admin mohon dibantu, aplikasi diharuskan update ke versi terbaru tetapi pas mau di update malah tidak bisa dengan keterangan aplikasi sudah tidak kompatibel dengan perangkat saya. Kira-kira untuk solusinya seperti apa ya? Sedangkan untuk download m-banking MyBCA pun juga tidak tersedia lagi di playstore perangkat saya.",device_compatibility
+a81114b2-66f8-4589-9264-7c20db21a515,1,"makin hari aplikasi semakin lambat",app_performance
+045d70a3-51b6-4161-93af-a6f3d6a3ea5a,1,"tiap scan pembayaran qris selalu double pembayaran kadang sampe 3x dan saldo saya blm kunjung kembali... tolong di audit itu",transaction_failed_balance_deducted
+17b925e7-7b4b-4a2b-a26d-a09d710a885b,1,"Hallo selamat malam, saya tadi top up shopeepay tp kok gak masuk"" dari tadi, ketika saya coba topup lagi masuk yang ke2 yang pertama tadi blm masuk sampai sekarang. tolong di bantu",app_performance
+38a9d93e-959a-45fc-959e-3aff2df0a316,1,"merepotkan di hp jadul bgini",device_compatibility
+de6f8b27-8a24-41d1-97dc-2667eae9b238,1,"sebagai pengguna yg selalu menggunakan qris sangat menjengkelkan karena aplikasinya nyusahin banget buat dipakai, jaringannya tidak jelas kadang ada kadang hilang hilang,tolong diperbaiki ,kesalahan seperti ini suka bikin antri di kasir",app_performance
+56d3afd8-80cc-4456-9ef0-4fb463d75f89,2,"sya 1 bln ini udah 3 x verifikasi kartu...tuk daftar ulang bahwa kartu SIM sya TDK cocok...ini maksud nya gmn ya... lama...lama pelayanan nya gmn ini...",login_otp_access
+72a0858f-39b3-4dbe-b0f9-49752a638c12,2,"sinyal nya jelek terus",none
+d4eb807d-c9e3-4eec-a989-133d205f17cd,1,"Tolong donk gimna Qris dana nya belum kembali",transaction_failed_balance_deducted
+3e182938-d412-4238-9f87-5407098a22ef,2,"ada apa dgn bca mobile...... ga bs d update dan mbengking pun ga bs d buka",app_performance
+c98989ae-0c49-4513-86dd-a4bb0eb02354,1,"Minta tolong Untuk Bank BCA untuk berikan fitur cek mutasi bulan ini sama bulan sebelumnya pada aplikasi BCA mobile dan periode mutasi bisa diperbarui maksimum 31 hari untuk mempermudah transaksi .Terimakasih🙏",none
+eb372b59-55c2-437d-b00f-848b2c6bc015,1,"sdikit2 update",maintenance_downtime
+3d960ba9-1276-4def-bb1a-5828f52dabc7,1,"Apk nggk jelas, Sering keluar sendiri, kalau aktivasi susah",app_performance
+2d1632d0-638d-40d5-82cb-47203d77bf68,1,"ribet",none
+f3bdd697-9c0a-45f7-881a-ed8e231ff001,2,"banyak errornya sekarang",app_performance
+d9c843c8-ac7e-44e8-864a-707e664f6919,2,"apk tidak bisah di gunakan untuk masuk apak kalok di gunakan selalu kembali sendiri",app_performance
+2ec5e7e9-8e64-4071-b007-4498e33263ce,1,"kenapa tidak kompatibel padahal hp yg aku pake baru🥴",device_compatibility
+9b1b8f82-705a-43a5-bf03-a94915983738,2,"haduhh.. kenapa transaksi pembayaran qris panding si... bikin susah orang aja",app_performance
+0e04350c-3876-4fca-8946-3edeb47d643f,2,"transaksi 2 kali gagal cuman yang kembali cuma 1 kali yang kembali pusing dah kalau begini terus..",transaction_failed_balance_deducted
+a1a4a00e-ced6-4d82-a9c1-1b22d615ec7f,1,"selalu minta login ulang. dan parahnya sms pakai pulsa",login_otp_access
+bb127983-1a7a-476b-b6cd-e3c2e860c826,1,"kata sandi sudah benar tapi diaplikasi malah salah dan sering seperti itu sampai pulsa untuk SMS ke operator habis",login_otp_access
+5e8f3dce-76a7-4b64-a867-e6bcad9214a7,1,"parah.",none
+fab64c46-b27a-43f4-b5d8-3be5f6409d57,1,"kenapa m-banking saya jadi tidak kompatibel di hp saya?",device_compatibility
+30c5a1c9-5d73-498e-9ddf-ea05c6903ca9,1,"setelah rilis update baru jadi gak bisa di pakai di hp jadul,jadi ya terpaksa tidak mengunakan bca mobile lagi,padahal sehari hari memakai bca mobile buat transaksi buat beli makanan mengunakan qris tapi ya sayang sekali mulai hari ini di tingalkan bca mobile nya,sebenarnya kecewa atmnya tidak bisa di pake pula",device_compatibility
+bf745109-e383-4957-9777-7a381c341884,1,"kmrn hp saya rusak dan aplikasi BCA mobile ke hapus dan ini mau download LG kok TDK bs ya",none
+c21fd2dd-d54c-4b18-a827-de63b7093eed,2,"kalo misal mau perbaikan tolong kasih info saya tidak tau kalau ada waktu perbaikan karena tidak bisa melakukan transaksi",maintenance_downtime

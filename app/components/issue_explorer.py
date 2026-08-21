@@ -111,7 +111,15 @@ def render(tables: dict) -> None:
 
     for _, r in tagged.head(25).iterrows():
         stars = "\u2605" * int(r["rating"]) + "\u2606" * (5 - int(r["rating"]))
-        rail_color, _ = tone_colors(rating_tone(r["rating"]))
+        # tone_colors("neutral") resolves to near-black ink, which is fine
+        # as a small-text default elsewhere (tags, stamps) but is actually
+        # the highest-contrast color in the set at full-card-rail scale -
+        # louder than the red/amber danger and warning rails next to it.
+        # That inverts this page's own point: a 5-star review would visually
+        # outshout a 1-star one. Route the "nothing wrong here" case (4-5
+        # star) to a quiet, receded rail instead of the shared ink default.
+        tone = rating_tone(r["rating"])
+        rail_color = COLORS["rule"] if tone == "neutral" else tone_colors(tone)[0]
         date_str = r["review_date"].strftime("%d %b %Y")
         other_issues = [i for i in r["issues"].split(",") if i and i != issue]
         tags_html = "".join(

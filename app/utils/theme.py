@@ -32,8 +32,19 @@ COLORS = {
     # Surfaces - off-white ledger paper, not the warm cream default.
     "bg": "#FAFAF6",
     "surface": "#FFFFFF",
-    "band": "#E9F0E1",       # pale ledger-green row band
+    # Ledger-green row band - reserved ONLY for the ledger table zebra
+    # stripe (the "green-bar accounting pad" signature move). Do not use
+    # this for hero cards, selected states, or active nav - reusing it
+    # there is what made every light-green surface in the app blur
+    # together with the semantic "success/validated" green below.
+    "band": "#E9F0E1",
     "band_strong": "#DCE7D1",
+    # Neutral highlight - warm parchment, NOT green. This is the token for
+    # "emphasized/selected/active" (hero metric card, active sidebar item,
+    # selected filter chip) so those states read as "picked out on the
+    # page" rather than borrowing the ledger stripe's meaning.
+    "highlight": "#F1EDE1",
+    "highlight_strong": "#E2DAC6",
     # Text - deep green-black ink rather than pure black.
     "ink": "#1B2A20",
     "muted": "#5B6B5D",
@@ -41,17 +52,23 @@ COLORS = {
     # Rule / border - soft green-grey, like ruled ledger lines.
     "rule": "#C9D3C0",
     "rule_strong": "#1B2A20",
-    # Brand / interaction - ballpoint-pen blue, used sparingly.
-    "primary": "#243F63",
+    # Brand mark - same ink as the rest of the page, not an unrelated
+    # navy. The wordmark/logo is part of the ledger, not a separate brand
+    # system pasted on top of it.
+    "primary": "#1B2A20",
+    # Interaction accent - a single muted ink-blue, used only for things
+    # you can actually click or remove (links, filter tag chips).
     "interact": "#2E5488",
     "soft_blue": "#E7ECF3",
-    # Semantic ink - reserved for stamps, tier, and trend only.
+    # Semantic ink - reserved for stamps, tier, and trend only. Success
+    # green is deliberately more saturated/darker than the ledger band
+    # above so the two greens can't be mistaken for each other.
     "danger": "#A23B2C",
     "danger_soft": "#F4E4DF",
     "warning": "#93641C",
     "warning_soft": "#F1E7D2",
-    "success": "#2E6B49",
-    "success_soft": "#E1EDE2",
+    "success": "#286B45",
+    "success_soft": "#DCEEDF",
     "neutral_soft": "#EEF1EA",
 }
 
@@ -155,33 +172,54 @@ def inject_css() -> None:
             padding-top: 1.6rem;
         }}
 
-        [data-testid="stSidebarNav"] {{
-            padding-top: 0.4rem;
+        /* Native st.navigation menu is hidden - dashboard.py builds a
+           custom ledger-style nav list with st.page_link instead, so it
+           can sit below the brand block in a fixed order instead of
+           Streamlit auto-injecting it above everything else. */
+
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {{
+            border-radius: 3px;
+            padding: 0.25rem 0.5rem;
+            margin-bottom: 1px;
+            width: 100%;
         }}
 
-        [data-testid="stSidebarNavLink"] {{
-            border-radius: 3px;
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {{
             font-family: {FONT_HEADING};
             font-weight: 600;
             font-size: 0.87rem;
             color: {COLORS['muted']};
-            padding: 0.4rem 0.6rem;
-            margin-bottom: 2px;
-            transition: background-color 0.12s ease;
         }}
 
-        [data-testid="stSidebarNavLink"]:hover {{
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover {{
             background-color: {COLORS['neutral_soft']};
         }}
 
-        [data-testid="stSidebarNavLink"][aria-current="page"] {{
-            background-color: {COLORS['band']};
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover p {{
             color: {COLORS['ink']};
-            border-left: 3px solid {COLORS['ink']};
         }}
 
-        [data-testid="stSidebarNavLink"][aria-current="page"] span {{
+        /* Active nav entry - rendered server-side as plain text (see
+           dashboard.py), not detected in CSS, so this only has to style
+           a fixed class name we control ourselves. */
+        .lg-nav-active {{
+            font-family: {FONT_HEADING};
+            font-weight: 700;
+            font-size: 0.87rem;
             color: {COLORS['ink']};
+            background-color: {COLORS['highlight']};
+            border-left: 3px solid {COLORS['ink']};
+            border-radius: 3px;
+            padding: 0.25rem 0.5rem;
+            margin-bottom: 1px;
+        }}
+
+        .lg-nav-index {{
+            font-family: {FONT_MONO};
+            font-size: 0.66rem;
+            color: {COLORS['faint']};
+            letter-spacing: 0.04em;
+            padding: 0.25rem 0;
         }}
 
         /* ---------------------------------------------------------- */
@@ -241,7 +279,7 @@ def inject_css() -> None:
         }}
 
         [data-testid="stButtonGroup"] button[data-selected="true"] {{
-            background-color: {COLORS['band']} !important;
+            background-color: {COLORS['highlight']} !important;
             border-color: {COLORS['ink']} !important;
             color: {COLORS['ink']} !important;
         }}
@@ -325,8 +363,8 @@ def inject_css() -> None:
         }}
 
         .lg-metric.lg-metric-hero {{
-            background-color: {COLORS['band']};
-            border-color: {COLORS['band_strong']};
+            background-color: {COLORS['highlight']};
+            border-color: {COLORS['highlight_strong']};
         }}
 
         .lg-metric-value {{

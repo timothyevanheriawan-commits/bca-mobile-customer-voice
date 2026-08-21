@@ -52,30 +52,16 @@ def _methodology_page():
 
 
 # --- Pages -----------------------------------------------------------------
-# position="hidden": Streamlit's built-in nav menu auto-injects itself at
-# the very top of the sidebar no matter where in the script it's called,
-# which meant the brand block below always rendered UNDER the nav list
-# regardless of code order - the opposite of what the layout intended.
-# Building the nav list by hand with st.page_link instead means the
-# sidebar actually renders in the order it's written: brand -> nav ->
-# dataset status.
 pages = [
-    st.Page(_overview_page, title="Overview", url_path="overview", default=True),
-    st.Page(_trends_page, title="Trends", url_path="trends"),
-    st.Page(_explorer_page, title="Issue Explorer", url_path="issue-explorer"),
-    st.Page(_methodology_page, title="Methodology", url_path="methodology"),
+    st.Page(_overview_page, title="01  Overview", url_path="overview", default=True),
+    st.Page(_trends_page, title="02  Trends", url_path="trends"),
+    st.Page(_explorer_page, title="03  Issue Explorer", url_path="issue-explorer"),
+    st.Page(_methodology_page, title="04  Methodology", url_path="methodology"),
 ]
 
-nav = st.navigation(pages, position="hidden")
+nav = st.navigation(pages, position="sidebar")
 
-# --- Sidebar: cover-sheet identity block, above the nav list ------------
-# Built as single-line fragments on purpose: a multi-line indented HTML
-# string gets misread as a markdown code block by the client-side
-# renderer, which is what caused a stray literal "</div>" to leak into
-# the Issue Explorer cards in an earlier pass. Keeping every fragment on
-# one line, and avoiding CSS custom properties inside inline style
-# attributes (they can trip the HTML sanitizer the same way), is the
-# actual fix - see issue_explorer.py for where that bug lived.
+# --- Sidebar Content -------------------------------------------------------
 with st.sidebar:
     brand_html = (
         '<div style="display:flex;align-items:center;gap:10px;">'
@@ -92,38 +78,8 @@ with st.sidebar:
     st.markdown(brand_html, unsafe_allow_html=True)
     st.markdown('<div style="height:14px;"></div>', unsafe_allow_html=True)
 
-    # Nav list, styled as ledger entries (same "Entry NN" language as the
-    # Methodology pipeline flow) instead of bare default page links, so
-    # the sidebar reads as part of the same design system rather than a
-    # generic widget.
-    #
-    # The active page is rendered as plain styled text, not a link -
-    # deliberately not relying on Streamlit's own active-link styling
-    # (its DOM markup for that turns out to use per-session emotion-cache
-    # class hashes with no stable attribute to hook a CSS selector to,
-    # confirmed by inspecting the rendered page rather than assumed).
-    # `nav` is the actual running Page object, so comparing against it is
-    # a real signal instead of a guess.
-    # All four rows live inside ONE container with an explicit small gap,
-    # rather than as four separate top-level st.columns() calls. Each
-    # st.columns() call is its own block in the sidebar's vertical stack,
-    # and Streamlit adds its default ~1rem gap between every block, not
-    # just between columns within a row - four separate calls meant four
-    # stacked gaps, which is what was making the nav read as loose/uneven
-    # and inflating the empty space before the divider below it.
-    with st.container(gap="xsmall"):
-        for i, page in enumerate(pages, start=1):
-            cols = st.columns([1, 5], gap="small", vertical_alignment="center")
-            with cols[0]:
-                st.markdown(f'<div class="lg-nav-index">{i:02d}</div>', unsafe_allow_html=True)
-            with cols[1]:
-                if page is nav:
-                    st.markdown(
-                        f'<div class="lg-nav-active">{page.title}</div>',
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.page_link(page, label=page.title)
+    # Let st.navigation render native links naturally without column loops
+    # ...
 
     st.divider()
 

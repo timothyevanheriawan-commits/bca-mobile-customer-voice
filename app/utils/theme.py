@@ -130,12 +130,40 @@ def inject_css() -> None:
         }}
 
         .stApp {{
-            background-color: {COLORS['bg']};
+            background-color: #FAFAF6;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }}
 
+        /* Streamlit main area */
+        [data-testid="stMain"] {{
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+        }}  
+
+        [data-testid="stMainBlockContainer"],
         .block-container {{
+            width: 100%;
+            max-width: min(1400px, 100%);
+            min-width: 0;
+            box-sizing: border-box;
             padding-top: 2.2rem;
-            max-width: 1180px;
+        }}
+
+        /* Prevent custom HTML layouts from exceeding the main area */
+        [data-testid="stMain"] * {{
+            min-width: 0;
+            box-sizing: border-box;
+        }}
+
+        .lg-subtitle,
+        .lg-body,
+        .lg-context {{
+            width: 100%;
+            max-width: 100%;
+            overflow-wrap: anywhere;
         }}
 
         h1, h2, h3, h4 {{
@@ -172,16 +200,22 @@ def inject_css() -> None:
             padding-top: 1.6rem;
         }}
 
+
+        /* Prevent custom HTML from forcing horizontal overflow */
+        [data-testid="stMain"] * {{
+            min-width: 0;
+            box-sizing: border-box;
+        }}
+
         /* Native st.navigation menu is hidden - dashboard.py builds a
            custom ledger-style nav list with st.page_link instead, so it
            can sit below the brand block in a fixed order instead of
            Streamlit auto-injecting it above everything else. */
 
         [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {{
-            border-radius: 3px;
+            bo  rder-radius: 3px;
             padding: 0.25rem 0.5rem;
             margin-bottom: 1px;
-            width: 100%;
         }}
 
         [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {{

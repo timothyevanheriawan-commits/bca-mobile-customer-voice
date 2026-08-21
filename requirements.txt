@@ -6,6 +6,4 @@ seaborn
 plotly
 google-play-scraper
 tqdm
-transformers
-torch
 scikit-learn

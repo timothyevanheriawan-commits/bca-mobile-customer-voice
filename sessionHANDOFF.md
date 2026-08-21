@@ -1,5 +1,117 @@
 # Session Handoff — bca-mobile-customer-voice
 
+**Date:** 2026-08-21 (session 4, Claude — regex fix)
+**Status:** Targeted precision fix for `app_performance` and
+`unexplained_deduction`, the two categories flagged `needs_regex_fix` in
+every session since Round 6. UI was NOT touched this session — Timothy's
+own read was that the redesign is decent and the regex is the real problem,
+so this session stayed precision-only per his call.
+
+## What happened this session
+
+Read every false positive by hand in `data/validation/precision_app_performance.csv`
+(12 of 30) and `data/validation/precision_unexplained_deduction.csv` (9 of
+30) before writing any new pattern — same discipline as every prior round.
+
+**`unexplained_deduction` (0.700 -> re-scored 1.000 against the same
+annotations, see caveat below):** the Round 6 exclude only recognized
+`gagal` as the "this describes a specific failed transaction attempt"
+signal, and required the literal spelling `transaksi`. Two things slipped
+through: (1) transposition typos (`tramsaksi`, `tarnsaksi`) never matched
+the literal word, and (2) reviews using `gangguan` or `pending` instead of
+`gagal` as the failure word weren't covered at all. Dropped the `transaksi`
+requirement entirely and widened the failure-word set to
+`gagal|gangguan|pending`, checked directly against a deduction word within
+a 120-char window. Verified this doesn't touch any of the 21 confirmed true
+positives in the sample — none of them use those three words near a
+deduction word.
+
+**`app_performance` (0.600 -> re-scored 0.750 against the same
+annotations):** four separate false-positive patterns, of which three were
+fixed:
+- "can't open the app" caused by an old/unsupported device is
+  `device_compatibility`'s story, not a generic performance one — added an
+  exclude for `versi lama` / `hp jadul` / `ga support` context.
+- A named transaction type failing with the balance deducted belongs to
+  `transaction_failed_balance_deducted` / `unexplained_deduction`, not a
+  standalone performance complaint — added the same qris/transfer +
+  kepotong exclude pattern used on the other side.
+- Two negation misses: `"ga pake lemot (lagi)"` means NO LONGER laggy (a
+  positive review), and `"jangan lemot ya"` is a closing wish, not a
+  description of an active problem. Both bare-keyword matches couldn't
+  tell affirmation from negation or wish from complaint.
+
+**Deliberately NOT fixed — real ambiguity, not a missed pattern:** several
+of the remaining false positives mention the indicator light (`lampu` /
+`indikator` / `sinyal` + a color) alongside a generic trigger word like
+`lemot` or `gangguan`. I built an exclude for this and then checked it
+against the sample's confirmed TRUE positives before keeping it — and it
+would have flipped at least 3 real true positives to false negatives (e.g.
+`"Sekarang BCA mobile sering eror, indikator merah terus..."`, correct=1,
+uses the exact same vocabulary shape as the false positives). There's no
+regex-visible difference between those two cases in this sample. Left as
+residual noise rather than force a rule that trades false positives for
+false negatives — same practice as the single-row edge cases left alone in
+earlier rounds (see module docstring). `app_performance` landing at 0.75
+instead of clearing 0.80 is a direct consequence of leaving this alone; a
+larger annotated sample might reveal a real distinguishing feature, this
+one (n=30) doesn't show one.
+
+## Important caveat on the numbers above — read before trusting them
+
+The 1.000 / 0.750 figures are the new classifier re-scored against the
+**existing** annotated samples (same reviews Timothy already read and
+judged) — not a fresh independent sample. This is a legitimate sanity
+check (same move Round 6 made, and the same one its own handoff entry
+flagged as less trustworthy than a fresh draw). Concretely:
+
+- The two `precision_app_performance.csv` / `precision_unexplained_deduction.csv`
+  files as they stood at the start of this session (0.600 / 0.700, the
+  numbers behind the `needs_regex_fix` stamps in the screenshots) are now
+  archived as `precision_app_performance_r2.csv` / `precision_unexplained_deduction_r2.csv`.
+- **New, unannotated 30-row samples were drawn from the freshly
+  reclassified dataset and written to the primary `precision_app_performance.csv`
+  / `precision_unexplained_deduction.csv` paths** (`correct` column blank),
+  using the existing `sample_for_precision()` — same mechanism the codebase
+  already uses for every prior round.
+- I did not fill in the `correct` column on the new primary files myself —
+  that's real annotation judgment on real customer text and isn't mine to
+  invent. `validation_status_table()` will read these as `unvalidated`
+  (0 annotated rows) until they're actually annotated, so the Methodology
+  page will currently show a step backward in status for both categories
+  (from `needs_regex_fix` to `unvalidated`) even though the underlying
+  regex genuinely improved. This is the honest state, not a bug — same
+  caution the previous handoff itself argued for ("re-run
+  `validation_status_table()` immediately after ... before writing it into
+  a handoff as final").
+
+**Next step for these two categories:** annotate the 30 fresh rows in each
+primary `precision_*.csv` (1 = correctly tagged, 0 = wrong), then reload
+Methodology to get the real post-fix precision number.
+
+## Also regenerated this session
+
+- `data/processed/bca_mobile_reviews_classified.csv` — re-run through
+  `classify_dataframe()` with the updated rules. Mention counts shifted as
+  expected from removed false positives: `app_performance` 688 -> 641,
+  `unexplained_deduction` 174 -> 95. Every other category's classification
+  logic is untouched — spot-checked all other categories' existing
+  precision samples for any accidental TP/FP shift; none found.
+- Notebooks (`03_issue_classification.ipynb`, `04_validation.ipynb`,
+  `05_prioritization.ipynb`) were **not** re-executed this session — they
+  still reflect the pre-Round-7 state. Re-run them before trusting their
+  printed output over the CSVs.
+
+## What I did not touch
+
+- No UI/theme changes.
+- No changes to any category's rules other than `app_performance` and
+  `unexplained_deduction`.
+- Recall (the unclassified-negative gap) — out of scope this round, same
+  as prior sessions.
+
+---
+
 **Date:** 2026-08-21 (session 3)
 **Status:** Full UI/UX redesign — "Customer Intelligence Console" direction,
 replacing the earlier "field report" theme. Dashboard is visually verified

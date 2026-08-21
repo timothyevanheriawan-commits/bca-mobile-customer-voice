@@ -309,8 +309,23 @@ ISSUE_EXCLUDES = {
         # keeps that case tagged while still catching the actual FPs, all of
         # which used "transaksi gagal" verbatim — checked against the
         # ROUND 5 annotated sample (not a fresh one) before adding.
-        r"\btr[ae]n?[sk]aksi\b.{0,60}\bgagal\b.{0,500}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
-        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,500}\btr[ae]n?[sk]aksi\b.{0,60}\bgagal\b",
+        # ROUND 7 — the ROUND 6 version of this exclude required the literal
+        # word "transaksi" (correctly spelled) plus "gagal" specifically.
+        # A fresh precision sample (data/validation/precision_unexplained_deduction.csv,
+        # scored 0.700) showed two gaps: (1) "transaksi" typo'd/transposed
+        # ("tramsaksi", "tarnsaksi") never matched the literal pattern, and
+        # (2) reviews describing the same "attempted transaction, no named
+        # type, generic failure" story with "gangguan" or "pending" instead
+        # of "gagal" ("transaksi sedang gangguan tp saldo kepotong", "pending
+        # mulu... saldo udah kepotong") weren't covered at all since "gagal"
+        # was the only failure word recognized. Dropping the "transaksi"
+        # requirement and widening the failure-word set to gagal/gangguan/
+        # pending fixes both without re-introducing the synonym-chasing loop
+        # from Rounds 3-4: checked against every correct=1 row in the current
+        # sample first, and none of them use gagal/gangguan/pending near a
+        # deduction word, so this doesn't touch any confirmed true positive.
+        r"\b(gagal|gangguan|pending)\b.{0,120}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
+        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,120}\b(gagal|gangguan|pending)\b",
         r"\b(qris|qr|q\s*ris|qiris|va|virtual\s*account|transfer|\btf\b|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token|tarik\s*tunai)\b.{0,500}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b",
         r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang)\b.{0,500}\b(qris|qr|q\s*ris|qiris|va|virtual\s*account|transfer|\btf\b|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token|tarik\s*tunai)\b",
         # a named, understood fee ("biaya admin", "potongan bulanan") is an
@@ -348,6 +363,41 @@ ISSUE_EXCLUDES = {
         # "maintenance" cited only as BCA's excuse inside a QRIS-failure
         # narrative — the review's actual subject is the failed transaction
         r"transaksi\s+(qris\s+)?gagal.{0,40}saldo",
+    ],
+    # ROUND 7 — app_performance precision sample (n=30) scored 0.600, the
+    # worst of any category. Read all 12 false positives by hand
+    # (data/validation/precision_app_performance.csv) before writing
+    # anything below. One pattern deliberately NOT here: several false
+    # positives mention the indicator light (lampu/indikator/sinyal + a
+    # color) alongside a generic trigger word like "lemot" or "gangguan" —
+    # but so do several CONFIRMED TRUE POSITIVES in the same sample (e.g.
+    # "Sekarang BCA mobile sering eror, indikator merah terus...",
+    # correct=1). There's no regex-visible difference between those two
+    # cases; an exclude broad enough to catch the false positives would
+    # also silently flip real true positives to false negatives. Per this
+    # module's own precedent (see the single-row edge cases left alone in
+    # the unexplained_deduction history above), that's left as genuine
+    # ambiguity rather than force-fit a rule.
+    "app_performance": [
+        # "gak bisa dibuka" caused by an old/unsupported device is
+        # device_compatibility's story, not a generic performance one —
+        # same distinction already drawn for login_otp_access above.
+        r"(tidak|ga|gak|nggak)\s+bisa\s+(di\s?)?buka.{0,200}(versi\s+lama|hp.{0,15}(lama|jadul)|(ga|gak|tidak|nggak)\s+support)",
+        r"(versi\s+lama|hp.{0,15}(lama|jadul)|(ga|gak|tidak|nggak)\s+support).{0,200}(tidak|ga|gak|nggak)\s+bisa\s+(di\s?)?buka",
+        # a named transaction type failing with the balance deducted is
+        # transaction_failed_balance_deducted's / unexplained_deduction's
+        # story — "gangguan"/"error" here is describing that failure, not a
+        # standalone performance complaint.
+        r"\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b.{0,300}\b(kepotong|ke\s?potong|terpotong|potongan|potong)\b",
+        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong)\b.{0,300}\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b",
+        # negation: "ga pake lemot (lagi)" means NO LONGER laggy — a
+        # positive review, not a complaint. Bare \blemot\b can't tell
+        # affirmation from negation on its own (same class of bug as the
+        # maintenance_downtime negation exclude above).
+        r"\b(ga|gak|tidak|nggak)\s+(pake|pakai)\s+lemot\b",
+        # "jangan lemot ya" is a closing wish/hope, not a description of an
+        # actual performance problem occurring right now.
+        r"\bjangan\s+lemot\b",
     ],
 }
 

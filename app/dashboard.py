@@ -22,7 +22,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.components import issue_explorer, methodology, overview, trends
 from app.utils.data_loader import load_all
 from app.utils.formatting import format_count
-from app.utils.theme import COLORS, inject_css
+from app.utils.theme import (
+    COLORS,
+    inject_css,
+    sidebar_coverage_strip,
+    sidebar_tier_counts,
+)
 
 st.set_page_config(
     page_title="BCA Mobile Customer Voice Ledger",
@@ -52,11 +57,15 @@ def _methodology_page():
 
 
 # --- Pages -----------------------------------------------------------------
+# Icons are Streamlit's built-in Material set - picked to read as ledger
+# actions (scan / chart / search / ruler) rather than generic app-nav
+# icons, so the nav keeps the "workpaper" character instead of looking
+# like a stock sidebar.
 pages = [
-    st.Page(_overview_page, title="01  Overview", url_path="overview", default=True),
-    st.Page(_trends_page, title="02  Trends", url_path="trends"),
-    st.Page(_explorer_page, title="03  Issue Explorer", url_path="issue-explorer"),
-    st.Page(_methodology_page, title="04  Methodology", url_path="methodology"),
+    st.Page(_overview_page, title="Overview", icon=":material/receipt_long:", url_path="overview", default=True),
+    st.Page(_trends_page, title="Trends", icon=":material/show_chart:", url_path="trends"),
+    st.Page(_explorer_page, title="Issue Explorer", icon=":material/manage_search:", url_path="issue-explorer"),
+    st.Page(_methodology_page, title="Methodology", icon=":material/rule:", url_path="methodology"),
 ]
 
 nav = st.navigation(pages, position="sidebar")
@@ -92,5 +101,25 @@ with st.sidebar:
         f'Ready for review &middot; {review_count} reviews logged</div>'
     )
     st.markdown(status_html, unsafe_allow_html=True)
+
+    st.divider()
+
+    # Live rollup of the same two things the Overview ledger table shows in
+    # full - how many issues are open at each priority tier, and how much
+    # of the classification has actually been checked against real
+    # annotations. Pulled from TABLES so it can't drift from the tables
+    # themselves, and fills what used to be dead space below the dataset
+    # status block.
+    st.markdown(sidebar_tier_counts(TABLES["priority"]), unsafe_allow_html=True)
+    st.markdown(sidebar_coverage_strip(TABLES["validation"]), unsafe_allow_html=True)
+
+    st.markdown('<div style="height:22px;"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="lg-sidebar-footer">'
+        'CUSTOMER VOICE LEDGER<br/>'
+        'Google Play &middot; ID &middot; rule-based classification'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 nav.run()

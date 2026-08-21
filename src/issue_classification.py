@@ -153,6 +153,66 @@ above predate that discipline and should be read as directional only):
   Classification is considered closed as of Round 6. Any future precision
   drift should be caught by re-running notebook 04 against a fresh sample,
   not assumed from this history.
+
+ROUND 8 (app_performance precision sample, Timothy-annotated, scored 0.667
+— read all 10 false positives by hand in
+data/validation/precision_app_performance.csv before writing anything
+below; the version scored 0.667 is archived as
+precision_app_performance_r3.csv):
+- Narrowed the bare \brestart\b trigger to require the APP be the subject
+  (\baplikasi\b nearby, or "restart sendiri/terus/mulu"). The one
+  restart-triggered false positive in the sample was "...atau restart hp
+  masih ajh merah" — the customer restarting their PHONE as a
+  troubleshooting step, not the app crashing/self-restarting. No confirmed
+  true positive in the sample used bare "restart", so this is low-risk.
+- Added an exclude for "gak bisa buka [bukti/struk/riwayat/mutasi/resi]" —
+  a specific in-app document failing to open is not the same complaint as
+  the app itself failing to open. Narrow 15-char window so it only fires
+  when the object noun sits right next to "buka".
+- Widened the existing qris/transfer/etc-plus-deduction exclude (originally
+  only kepotong/terpotong/potongan/potong) to also cover hilang/ilang/
+  berkurang/lenyap — two false positives used "lenyap" and "berkurang
+  saldo" instead, which the narrower word list didn't catch. Mirrors the
+  vocabulary already used in unexplained_deduction's own exclude.
+- Added an exclude for "uninstall/instal ulang" when it co-occurs with
+  either device-incompatibility language ("tidak kompatibel...") or
+  verification language ("verifikasi"/the "feriv" typo seen in the
+  sample) — both false positives here were actually device_compatibility's
+  and face_verification_failure's stories respectively, just mentioning a
+  reinstall in passing.
+- Added a narrow exclude for the exact phrase "trouble atau tidaknya" — a
+  feature suggestion (asking BCA to proactively disclose outages), not a
+  description of an active problem. Deliberately phrase-specific, not a
+  general \btrouble\b exclude, since bare "trouble" is still a real signal
+  elsewhere in the dataset.
+- Left alone, same as Round 7: reviews mentioning the indicator light
+  (lampu/indikator/sinyal + a color) alongside a generic trigger word like
+  lemot/gangguan/trouble. Re-checked against this fresh sample specifically
+  — it still shows confirmed TRUE positives using the identical vocabulary
+  shape as the false positives (e.g. "...padahal sinyal bagus" appears in
+  both a correct=1 and a correct=0 row). Still no regex-visible
+  distinguishing feature; forcing an exclude here would flip real true
+  positives to false negatives, same as documented in Round 7.
+
+Rescored against Timothy's original 30 annotations (7 of 10 false
+positives excluded, 0 true positives dropped) rather than drawn as a fresh
+independent sample — same practice as Round 6, with the same caveat: this
+is less trustworthy than a fresh draw, since a different 30-row sample
+could surface false-positive shapes this one didn't. Precision on the
+resulting 23-row subset: 0.870 (up from 0.667). Recommend pulling a fresh
+precision_app_performance.csv and re-annotating before treating 0.870 as
+final.
+
+ui_ux_regression (n=2 mentions in the whole dataset, precision sample also
+n=2): the one false positive genuinely uses "tampilan...jelek sekali", so
+it's not a keyword miss — but it's actually a missing-feature complaint
+(can't rename/alias a saved account number) wearing "tampilan" as
+incidental phrasing, not a cosmetic/visual complaint. Left unchanged: with
+only 2 total mentions in 5,000 reviews, a single annotated row isn't
+enough evidence to build a generalizable rule from without a real risk of
+overfitting to this one review. The 0.5 precision score itself should be
+read as "sample too small to trust," not "half-broken" — flag for a larger
+sample once this category's overall volume in the dataset is higher.
 """
 
 import re
@@ -205,7 +265,15 @@ ISSUE_RULES = {
     "app_performance": [
         r"\blemot\b",
         r"\b(error|eror)",  # no trailing \b: catches suffixed forms like "errornya"
-        r"\brestart\b",
+        # ROUND 8 narrowing: bare \brestart\b also matched "restart hp" used
+        # as a troubleshooting step the customer took (restarted their
+        # PHONE), not the app crashing/restarting itself — the only
+        # restart-family false positive in the Round 8 sample was exactly
+        # this ("...atau restart hp masih ajh merah"). Requiring the app
+        # itself be the subject keeps the self-restart/crash-loop meaning
+        # this rule was actually meant to catch.
+        r"\baplikasi\b.{0,30}\brestart\b|\brestart\b.{0,30}\baplikasi\b",
+        r"\brestart\s+(sendiri|terus|mulu)\b",
         r"uninstall|instal\s+ulang|hapus\s+download",
         # app won't open / can't be accessed at all (distinct from "lemot"=slow)
         r"(gak|ga|gk|nggak|tidak)\s+bisa\s+(di\s?)?buka",
@@ -384,12 +452,43 @@ ISSUE_EXCLUDES = {
         # same distinction already drawn for login_otp_access above.
         r"(tidak|ga|gak|nggak)\s+bisa\s+(di\s?)?buka.{0,200}(versi\s+lama|hp.{0,15}(lama|jadul)|(ga|gak|tidak|nggak)\s+support)",
         r"(versi\s+lama|hp.{0,15}(lama|jadul)|(ga|gak|tidak|nggak)\s+support).{0,200}(tidak|ga|gak|nggak)\s+bisa\s+(di\s?)?buka",
+        # ROUND 8 — "gak bisa buka [bukti/struk/riwayat transaksi]" is about
+        # a specific document/screen inside the app failing to open, not
+        # the app itself. Narrow window (15 chars) since this needs to sit
+        # right next to "buka" to mean the object being opened, not a
+        # generic mention elsewhere in a longer review.
+        r"(tidak|ga|gak|nggak)\s+bisa\s+(di\s?)?buka\b.{0,15}\b(bukti|struk|riwayat|mutasi|resi)\b",
         # a named transaction type failing with the balance deducted is
         # transaction_failed_balance_deducted's / unexplained_deduction's
         # story — "gangguan"/"error" here is describing that failure, not a
-        # standalone performance complaint.
-        r"\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b.{0,300}\b(kepotong|ke\s?potong|terpotong|potongan|potong)\b",
-        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong)\b.{0,300}\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b",
+        # standalone performance complaint. ROUND 8: widened the money-word
+        # side of this to match unexplained_deduction's own exclude
+        # vocabulary (hilang/ilang/berkurang/lenyap) — the Round 8 sample
+        # had two false positives using "lenyap" and "berkurang saldo"
+        # instead of kepotong/terpotong, which the original narrower list
+        # didn't catch.
+        r"\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b.{0,300}\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang|lenyap)\b",
+        r"\b(kepotong|ke\s?potong|terpotong|potongan|potong|hilang|ilang|berkurang|lenyap)\b.{0,300}\b(qris|qr|transfer|top\s*up|topup|beli|pembelian|bayar|pembayaran|pulsa|token)\b",
+        # ROUND 8 — "uninstall/instal ulang" fired on two false positives
+        # that were never actually about app_performance:
+        # (1) a device literally too old for the current version ("...tidak
+        #     kompatibel dengan versi ini" after trying to reinstall) —
+        #     device_compatibility's own story, already covered by its
+        #     positive rule; this just stops app_performance double-tagging
+        #     it.
+        # (2) uninstalling/reinstalling mentioned only as a hypothetical
+        #     example while asking BCA to not require re-verification after
+        #     a reinstall — the actual subject is face_verification_failure,
+        #     not a performance complaint. Covers both the correct spelling
+        #     and the "feriv(ikasi)" typo seen in the sample.
+        r"(uninstall|instal\s+ulang|hapus\s+download).{0,200}((tidak|ga|gak|nggak)\s+komp?[ae]t[ei]b(el|le)|ver[ei]?[fv]ikasi|feriv)",
+        r"((tidak|ga|gak|nggak)\s+komp?[ae]t[ei]b(el|le)|ver[ei]?[fv]ikasi|feriv).{0,200}(uninstall|instal\s+ulang|hapus\s+download)",
+        # ROUND 8 — "info trouble atau tidaknya" is a feature suggestion
+        # (asking BCA to proactively communicate about outages), not a
+        # description of a problem happening in this review right now.
+        # Narrow phrase match, not a general "trouble" exclude, since
+        # "trouble" bare is still a real positive signal elsewhere.
+        r"\btrouble\s+atau\s+tidaknya\b",
         # negation: "ga pake lemot (lagi)" means NO LONGER laggy — a
         # positive review, not a complaint. Bare \blemot\b can't tell
         # affirmation from negation on its own (same class of bug as the

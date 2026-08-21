@@ -207,15 +207,16 @@ def inject_css() -> None:
             box-sizing: border-box;
         }}
 
-        /* Native st.navigation menu is hidden - dashboard.py builds a
-           custom ledger-style nav list with st.page_link instead, so it
-           can sit below the brand block in a fixed order instead of
-           Streamlit auto-injecting it above everything else. */
+        /* st.navigation renders its own page-link list in the sidebar.
+           These rules restyle it to match the ledger theme instead of
+           replacing it with custom markup. */
 
         [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {{
-            bo  rder-radius: 3px;
+            border-radius: 3px;
+            border-left: 3px solid transparent;
             padding: 0.25rem 0.5rem;
             margin-bottom: 1px;
+            transition: background-color 0.1s ease, border-left-color 0.1s ease;
         }}
 
         [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {{
@@ -233,27 +234,93 @@ def inject_css() -> None:
             color: {COLORS['ink']};
         }}
 
-        /* Active nav entry - rendered server-side as plain text (see
-           dashboard.py), not detected in CSS, so this only has to style
-           a fixed class name we control ourselves. */
-        .lg-nav-active {{
-            font-family: {FONT_HEADING};
-            font-weight: 700;
-            font-size: 0.87rem;
-            color: {COLORS['ink']};
+        /* Active nav entry - Streamlit marks the current page link with
+           aria-current="page" itself, so the active state is driven off
+           that real attribute rather than a class nothing ever applies. */
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] {{
             background-color: {COLORS['highlight']};
             border-left: 3px solid {COLORS['ink']};
-            border-radius: 3px;
-            padding: 0.25rem 0.5rem;
-            margin-bottom: 1px;
         }}
 
-        .lg-nav-index {{
+        [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] p {{
+            font-weight: 700;
+            color: {COLORS['ink']};
+        }}
+
+        /* ---------------------------------------------------------- */
+        /* Sidebar status blocks - "Open Items" tier count and the     */
+        /* validation coverage strip. Real numbers pulled live from    */
+        /* the priority/validation tables, not decoration - same       */
+        /* discipline as the rest of the page.                        */
+        /* ---------------------------------------------------------- */
+
+        .lg-side-label {{
             font-family: {FONT_MONO};
-            font-size: 0.66rem;
+            font-weight: 500;
+            font-size: 0.68rem;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
             color: {COLORS['faint']};
-            letter-spacing: 0.04em;
-            padding: 0.25rem 0;
+            margin-bottom: 7px;
+        }}
+
+        .lg-tier-row {{
+            display: flex;
+            gap: 14px;
+        }}
+
+        .lg-tier-item {{
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }}
+
+        .lg-tier-dot {{
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }}
+
+        .lg-tier-count {{
+            font-family: {FONT_MONO};
+            font-weight: 600;
+            font-size: 0.86rem;
+            color: {COLORS['ink']};
+        }}
+
+        .lg-tier-name {{
+            font-family: {FONT_BODY};
+            font-size: 0.7rem;
+            color: {COLORS['muted']};
+        }}
+
+        .lg-coverage-strip {{
+            display: flex;
+            gap: 3px;
+            margin-top: 9px;
+        }}
+
+        .lg-coverage-tick {{
+            flex: 1 1 0;
+            height: 5px;
+            border-radius: 1px;
+        }}
+
+        .lg-coverage-caption {{
+            font-family: {FONT_MONO};
+            font-size: 0.7rem;
+            color: {COLORS['muted']};
+            margin-top: 6px;
+        }}
+
+        .lg-sidebar-footer {{
+            font-family: {FONT_MONO};
+            font-size: 0.68rem;
+            color: {COLORS['faint']};
+            letter-spacing: 0.03em;
+            line-height: 1.6;
         }}
 
         /* ---------------------------------------------------------- */
@@ -714,6 +781,57 @@ def pipeline_flow(steps: list[tuple[str, str]]) -> None:
         if i < len(steps):
             parts.append('<div class="lg-flow-arrow">&rarr;</div>')
     st.markdown(f'<div class="lg-flow">{"".join(parts)}</div>', unsafe_allow_html=True)
+
+
+def sidebar_tier_counts(priority_df) -> str:
+    """'Open Items' row - count of High/Medium/Low tier issues, as three
+    ledger-style entries (dot + count + label) using the same TIER_COLORS
+    every other tier badge on the site uses. Real counts from the live
+    priority table, not a static number, so it can't drift from what the
+    Overview page itself shows.
+    """
+    order = ["High", "Medium", "Low"]
+    counts = priority_df["priority_tier"].value_counts().to_dict()
+    items = []
+    for tier in order:
+        n = counts.get(tier, 0)
+        items.append(
+            f'<div class="lg-tier-item">'
+            f'<span class="lg-tier-dot" style="background-color:{TIER_COLORS[tier]};"></span>'
+            f'<span class="lg-tier-count">{n}</span>'
+            f'<span class="lg-tier-name">{tier}</span>'
+            f'</div>'
+        )
+    return (
+        '<div class="lg-side-label">Open Items</div>'
+        f'<div class="lg-tier-row">{"".join(items)}</div>'
+    )
+
+
+def sidebar_coverage_strip(validation_df) -> str:
+    """A row of small ticks, one per issue category, colored by that
+    category's validation_status - a miniature version of the stamp
+    column on the Overview ledger table. Lets you see validation coverage
+    at a glance from any page without opening the table.
+    """
+    ticks = []
+    validated_n = 0
+    total = len(validation_df)
+    for _, row in validation_df.sort_values("issue").iterrows():
+        status = row.get("validation_status")
+        color = VALIDATION_COLORS.get(status, VALIDATION_COLORS["unvalidated"])
+        if status == "validated":
+            validated_n += 1
+        label = row["issue"].replace("_", " ")
+        ticks.append(
+            f'<span class="lg-coverage-tick" style="background-color:{color};" '
+            f'title="{label}: {status or "unvalidated"}"></span>'
+        )
+    return (
+        '<div class="lg-side-label" style="margin-top:16px;">Validation Coverage</div>'
+        f'<div class="lg-coverage-strip">{"".join(ticks)}</div>'
+        f'<div class="lg-coverage-caption">{validated_n}/{total} categories validated</div>'
+    )
 
 
 def ledger_table(headers: list[str], rows: list[list[str]], col_classes: list[str] | None = None) -> None:

@@ -14,6 +14,7 @@ import streamlit as st
 from app.utils.definitions import DEFINITIONS
 from app.utils.formatting import format_count, issue_label, validation_tone
 from app.utils.theme import COLORS, breadcrumb, ledger_table, pipeline_flow, stamp
+from src.issue_classification import ISSUE_RULES
 
 PIPELINE_STEPS = [
     ("Reviews", "Google Play reviews for the BCA Mobile app, collected via google-play-scraper."),
@@ -70,7 +71,9 @@ def render(tables: dict) -> None:
         '<p class="lg-subtitle">What each label in this dashboard is actually supposed '
         'to mean. These are the same definitions the manual validation tool shows an '
         'annotator, so "correct" in the precision numbers below means "matches this '
-        'sentence," nothing looser.</p>',
+        'sentence," nothing looser. The rule count is how many separate regex patterns '
+        'feed that category - more patterns generally means more phrasing variants '
+        'covered, not a fuzzier match.</p>',
         unsafe_allow_html=True,
     )
     st.write("")
@@ -102,6 +105,26 @@ def render(tables: dict) -> None:
     st.write("")
     _validation_ledger(validation_df)
 
+    near_threshold = validation_df[
+        (validation_df["validation_status"] == "validated")
+        & (validation_df["precision"].notna())
+        & (validation_df["precision"] < 0.90)
+    ].sort_values("precision")
+    if len(near_threshold):
+        names = ", ".join(
+            f"{issue_label(row['issue'])} ({row['precision']:.2f})"
+            for _, row in near_threshold.iterrows()
+        )
+        st.markdown(
+            f'<p class="lg-body">Passing 0.80 is a floor, not a target. '
+            f'<strong style="color:{COLORS["ink"]};">{names}</strong> clear the threshold '
+            'but sit closer to it than the rest of the ledger - treat their counts as '
+            'directionally right rather than exact, and prioritize these first if '
+            'another regex round happens.</p>',
+            unsafe_allow_html=True,
+        )
+        st.write("")
+
     st.divider()
     st.subheader("Known limitations")
     st.markdown(
@@ -121,12 +144,17 @@ def render(tables: dict) -> None:
 
 
 def _definitions_table(validation_df) -> None:
-    headers = ["Category", "Definition"]
+    headers = ["Category", "Definition", "Regex rules"]
     rows = []
     for issue in validation_df.sort_values("issue")["issue"]:
         definition = DEFINITIONS.get(issue, "No definition recorded for this category yet.")
-        rows.append([f"<strong>{issue_label(issue)}</strong>", definition])
-    ledger_table(headers, rows)
+        n_rules = len(ISSUE_RULES.get(issue, []))
+        rows.append([
+            f"<strong>{issue_label(issue)}</strong>",
+            definition,
+            f'{n_rules} pattern{"s" if n_rules != 1 else ""}',
+        ])
+    ledger_table(headers, rows, col_classes=["", "", "lg-right"])
 
 
 def _precision_chart(validation_df) -> None:

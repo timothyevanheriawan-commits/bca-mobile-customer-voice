@@ -21,13 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.components import issue_explorer, methodology, overview, trends
 from app.utils.data_loader import load_all
-from app.utils.formatting import format_count
-from app.utils.theme import (
-    COLORS,
-    inject_css,
-    sidebar_coverage_strip,
-    sidebar_tier_counts,
-)
+from app.utils.theme import COLORS, inject_css, sidebar_tier_counts
 
 st.set_page_config(
     page_title="BCA Mobile Customer Voice Ledger",
@@ -92,34 +86,12 @@ with st.sidebar:
 
     st.divider()
 
-    review_count = format_count(len(TABLES["reviews"]))
-    status_html = (
-        '<div class="lg-eyebrow" style="margin-bottom:2px;">Dataset</div>'
-        f'<div style="font-family:\'IBM Plex Sans\',sans-serif;font-weight:600;font-size:0.84rem;'
-        f'color:{COLORS["ink"]};">Google Play Reviews</div>'
-        f'<div class="lg-mono" style="font-size:0.74rem;color:{COLORS["success"]};margin-top:4px;">'
-        f'Ready for review &middot; {review_count} reviews logged</div>'
-    )
-    st.markdown(status_html, unsafe_allow_html=True)
-
-    st.divider()
-
-    # Live rollup of the same two things the Overview ledger table shows in
-    # full - how many issues are open at each priority tier, and how much
-    # of the classification has actually been checked against real
-    # annotations. Pulled from TABLES so it can't drift from the tables
-    # themselves, and fills what used to be dead space below the dataset
-    # status block.
+    # Trimmed to the one thing the sidebar can say that the nav links
+    # can't: how many issues are open at each priority tier, right now,
+    # from any page. Dataset status, the validation coverage strip, and
+    # the footer tagline all either repeated what the Overview/Methodology
+    # pages already say in full, or were pure branding - cut rather than
+    # kept as dead weight next to the nav.
     st.markdown(sidebar_tier_counts(TABLES["priority"]), unsafe_allow_html=True)
-    st.markdown(sidebar_coverage_strip(TABLES["validation"]), unsafe_allow_html=True)
-
-    st.markdown('<div style="height:22px;"></div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="lg-sidebar-footer">'
-        'CUSTOMER VOICE LEDGER<br/>'
-        'Google Play &middot; ID &middot; rule-based classification'
-        '</div>',
-        unsafe_allow_html=True,
-    )
 
 nav.run()

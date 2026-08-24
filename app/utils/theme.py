@@ -74,7 +74,7 @@ COLORS = {
 
 FONT_HEADING = "'Space Grotesk', sans-serif"
 FONT_BODY = "'IBM Plex Sans', sans-serif"
-FONT_MONO = "'IBM Plex Mono', monospace"
+FONT_MONO = "'JetBrains Mono', monospace"
 
 TIER_COLORS = {
     "High": COLORS["danger"],
@@ -122,7 +122,7 @@ def inject_css() -> None:
     st.markdown(
         f"""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
         html, body, [class*="css"] {{
             font-family: {FONT_BODY};
@@ -172,9 +172,9 @@ def inject_css() -> None:
             letter-spacing: -0.01em;
         }}
 
-        h1 {{ font-size: 1.85rem; font-weight: 700; margin-bottom: 0.15rem; }}
-        h2 {{ font-size: 1.2rem; font-weight: 600; }}
-        h3 {{ font-size: 1.05rem; font-weight: 600; }}
+        h1 {{ font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.2rem; line-height: 1.05; }}
+        h2 {{ font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }}
+        h3 {{ font-size: 1.15rem; font-weight: 600; }}
 
         p, span, div, label {{ font-family: {FONT_BODY}; }}
 
@@ -416,10 +416,37 @@ def inject_css() -> None:
         }}
 
         .lg-subtitle {{
-            font-size: 0.98rem;
+            font-size: 1.08rem;
             color: {COLORS['muted']};
             max-width: 62ch;
             line-height: 1.5;
+        }}
+
+        .lg-section-eyebrow {{
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            font-family: {FONT_MONO};
+            font-weight: 600;
+            font-size: 0.74rem;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: {COLORS['muted']};
+            margin-top: 4px;
+            margin-bottom: 2px;
+        }}
+
+        .lg-section-eyebrow .lg-section-num {{
+            color: {COLORS['ink']};
+        }}
+
+        .lg-section-title {{
+            font-family: {FONT_HEADING};
+            font-weight: 700;
+            font-size: 1.55rem;
+            letter-spacing: -0.01em;
+            color: {COLORS['ink']};
+            margin: 0 0 0.2rem 0;
         }}
 
         .lg-context {{
@@ -471,7 +498,7 @@ def inject_css() -> None:
         .lg-metric-value {{
             font-family: {FONT_MONO};
             font-weight: 600;
-            font-size: 1.5rem;
+            font-size: 1.85rem;
             color: {COLORS['ink']};
             line-height: 1.15;
         }}
@@ -517,7 +544,7 @@ def inject_css() -> None:
         .lg-callout-title {{
             font-family: {FONT_HEADING};
             font-weight: 700;
-            font-size: 1.05rem;
+            font-size: 1.35rem;
             color: {COLORS['ink']};
             margin-top: 3px;
         }}
@@ -599,6 +626,14 @@ def inject_css() -> None:
             color: {COLORS['warning']};
             margin-top: 3px;
             display: block;
+        }}
+
+        .lg-trend-label {{
+            font-family: {FONT_MONO};
+            font-size: 0.74rem;
+            color: {COLORS['muted']};
+            margin-top: 2px;
+            white-space: nowrap;
         }}
 
         /* ---------------------------------------------------------- */
@@ -724,6 +759,59 @@ def page_header(section: str, title: str, subtitle: str, context: str | None = N
     if context:
         html += f'<div class="lg-context">{context}</div>'
     st.markdown(html, unsafe_allow_html=True)
+
+
+def section_header(number: str, title: str) -> None:
+    """Numbered section marker used in place of a bare st.subheader.
+
+    Every page numbers its own sections independently (01, 02, 03...) so a
+    reader always knows how far through a page they are and how many
+    sections are left, the same wayfinding a numbered report gives you
+    that an unnumbered stack of headers doesn't.
+    """
+    html = (
+        f'<div class="lg-section-eyebrow"><span class="lg-section-num">Entry {number}</span></div>'
+        f'<h2 class="lg-section-title">{title}</h2>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def sparkline(values: list[float], tone: str = "neutral", width: int = 64, height: int = 20) -> str:
+    """Minimal inline SVG line for the priority ledger's Trend column.
+
+    Renders as plain markup inside a <td> - no chart library, no extra
+    request, just enough shape to show whether a category has been
+    climbing, falling, or flat month to month, next to the arrow/word
+    the column already had. Too few points to plot meaningfully (fewer
+    than 2 months) falls back to the same "not enough months" language
+    used elsewhere for insufficient_data.
+    """
+    clean = [v for v in values if v == v]  # drop NaN
+    if len(clean) < 2:
+        return f'<span style="color:{COLORS["faint"]};font-size:0.78rem;">not enough months</span>'
+
+    fg, _ = tone_colors(tone)
+    lo, hi = min(clean), max(clean)
+    span = (hi - lo) or 1
+    pad = 2.5
+    n = len(clean)
+    step = (width - 2 * pad) / (n - 1)
+    pts = []
+    for i, v in enumerate(clean):
+        x = pad + i * step
+        y = height - pad - ((v - lo) / span) * (height - 2 * pad)
+        pts.append((x, y))
+    points_attr = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    last_x, last_y = pts[-1]
+
+    return (
+        f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        f'style="vertical-align:middle;" role="img" aria-label="Monthly trend line">'
+        f'<polyline points="{points_attr}" fill="none" stroke="{fg}" stroke-width="1.6" '
+        f'stroke-linecap="round" stroke-linejoin="round" />'
+        f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.1" fill="{fg}" />'
+        f'</svg>'
+    )
 
 
 def tag(text: str, tone: str) -> str:

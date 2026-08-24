@@ -115,6 +115,16 @@ def render(tables: dict) -> None:
     st.plotly_chart(fig, width="stretch")
 
     st.divider()
+    st.subheader("Monthly heatmap, every category")
+    st.markdown(
+        '<p class="lg-subtitle">The same monthly-share data as the chart above, but all '
+        '10 categories at once instead of the ones picked for plotting. Useful for '
+        'spotting a spike in a category that would not have made the default selection.</p>',
+        unsafe_allow_html=True,
+    )
+    _monthly_heatmap(monthly_df)
+
+    st.divider()
     st.subheader("Trend direction, all categories")
     st.markdown(
         '<p class="lg-subtitle">Every category, not just the ones plotted above. '
@@ -152,6 +162,37 @@ def _volume_chart(df) -> None:
         xaxis=dict(gridcolor="rgba(0,0,0,0)"),
         height=260,
         showlegend=False,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+
+def _monthly_heatmap(monthly_df) -> None:
+    pivot = monthly_df.pivot(index="issue", columns="month", values="share_of_month").fillna(0)
+    pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=True).index]
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=pivot.values,
+            x=list(pivot.columns),
+            y=[issue_label(i) for i in pivot.index],
+            colorscale=[[0, "#FAFAF6"], [1, COLORS["interact"]]],
+            text=[[format_pct(v) for v in row] for row in pivot.values],
+            texttemplate="%{text}",
+            textfont=dict(size=10, color=COLORS["ink"]),
+            hovertemplate="%{y}<br>%{x}: %{text}<extra></extra>",
+            showscale=False,
+            xgap=3,
+            ygap=3,
+        )
+    )
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=11),
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(side="bottom", gridcolor="rgba(0,0,0,0)"),
+        yaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        height=420,
     )
     st.plotly_chart(fig, width="stretch")
 

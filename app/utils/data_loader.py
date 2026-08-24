@@ -26,7 +26,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.analysis import (
+    issue_cooccurrence_table,
     issue_frequency_table,
+    issue_rating_matrix,
     issue_trend_direction,
     monthly_issue_share,
 )
@@ -68,6 +70,16 @@ def load_priority(_freq_df: pd.DataFrame, _trend_df: pd.DataFrame, _val_df: pd.D
     return build_priority_table(_freq_df, _trend_df, _val_df)
 
 
+@st.cache_data
+def load_cooccurrence(_df: pd.DataFrame) -> pd.DataFrame:
+    return issue_cooccurrence_table(_df)
+
+
+@st.cache_data
+def load_rating_matrix(_df: pd.DataFrame) -> pd.DataFrame:
+    return issue_rating_matrix(_df)
+
+
 def load_all() -> dict[str, pd.DataFrame]:
     """One call that returns every table a page might need, computed in the
     correct dependency order."""
@@ -77,6 +89,8 @@ def load_all() -> dict[str, pd.DataFrame]:
     validation_df = load_validation()
     frequency_df = load_frequency(df)
     priority_df = load_priority(frequency_df, trend_df, validation_df)
+    cooccurrence_df = load_cooccurrence(df)
+    rating_matrix_df = load_rating_matrix(df)
 
     return {
         "reviews": df,
@@ -85,4 +99,6 @@ def load_all() -> dict[str, pd.DataFrame]:
         "validation": validation_df,
         "frequency": frequency_df,
         "priority": priority_df,
+        "cooccurrence": cooccurrence_df,
+        "rating_matrix": rating_matrix_df,
     }

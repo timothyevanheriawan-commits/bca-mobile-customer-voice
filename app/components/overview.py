@@ -25,6 +25,12 @@ from app.utils.formatting import (
 )
 from app.utils.theme import COLORS, breadcrumb, callout, ledger_table, metric_row, stamp, tag
 
+STAR_COLORS = {
+    1: COLORS["danger"], 2: "#C97A64",
+    3: COLORS["warning"],
+    4: COLORS["faint"], 5: COLORS["success"],
+}
+
 
 def render(tables: dict) -> None:
     df = tables["reviews"]
@@ -160,6 +166,28 @@ def render(tables: dict) -> None:
     )
     st.plotly_chart(fig, width="stretch")
 
+    st.divider()
+    st.subheader("Rating composition, by issue")
+    st.markdown(
+        '<p class="lg-subtitle">Same issues, split by the star rating attached to each '
+        'mention. This is the shape behind the single "% from 1-2 stars" number on the '
+        'ledger above: an issue concentrated at 1 star reads as more urgent than one '
+        'spread evenly across 1 and 2, even when both hit the same overall share.</p>',
+        unsafe_allow_html=True,
+    )
+    _rating_composition_chart(tables["rating_matrix"])
+
+    st.divider()
+    st.subheader("Where problems overlap")
+    st.markdown(
+        '<p class="lg-subtitle">The 10 issue pairs tagged together most often on the '
+        'same review. A high count here usually means one underlying incident is '
+        'surfacing as two labels, not two independent problems - worth reading before '
+        'scoping a fix as if each issue were separate.</p>',
+        unsafe_allow_html=True,
+    )
+    _cooccurrence_ledger(tables["cooccurrence"])
+
 
 def _rating_distribution_chart(df) -> None:
     counts = df["rating"].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
@@ -188,6 +216,50 @@ def _rating_distribution_chart(df) -> None:
         showlegend=False,
     )
     st.plotly_chart(fig, width="stretch")
+
+
+def _rating_composition_chart(rating_matrix_df) -> None:
+    ordered = rating_matrix_df.sort_values("n_mentions", ascending=True)
+    fig = go.Figure()
+    for star in [1, 2, 3, 4, 5]:
+        fig.add_trace(
+            go.Bar(
+                name=f"{star} star",
+                x=ordered[f"star_{star}"],
+                y=[issue_label(i) for i in ordered["issue"]],
+                orientation="h",
+                marker_color=STAR_COLORS[star],
+            )
+        )
+    fig.update_layout(
+        barmode="stack",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=12),
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(gridcolor=COLORS["rule"], title="Reviews"),
+        yaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        height=420,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+
+def _cooccurrence_ledger(cooccurrence_df) -> None:
+    if cooccurrence_df.empty:
+        st.info("No two issues were tagged together often enough to report.")
+        return
+
+    headers = ["Issue A", "Issue B", "Reviews tagged with both"]
+    rows = [
+        [
+            f"<strong>{issue_label(row['issue_a'])}</strong>",
+            f"<strong>{issue_label(row['issue_b'])}</strong>",
+            format_count(row["n_reviews"]),
+        ]
+        for _, row in cooccurrence_df.iterrows()
+    ]
+    ledger_table(headers, rows, col_classes=["", "", "lg-right"])
 
 
 def _priority_ledger(priority_df) -> None:

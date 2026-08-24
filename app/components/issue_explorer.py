@@ -22,12 +22,17 @@ and the actual fix.
 from __future__ import annotations
 
 import html
+from collections import Counter
 
+import plotly.graph_objects as go
 import streamlit as st
 
 from app.utils.definitions import get_definition
 from app.utils.formatting import format_count, format_pct, issue_label
 from app.utils.theme import COLORS, breadcrumb, callout, metric_row, rating_tone, tone_colors
+from src.text_utils import tokenize
+
+PAGE_SIZE = 25
 
 
 def render(tables: dict) -> None:
@@ -70,6 +75,23 @@ def render(tables: dict) -> None:
         {"label": "From 1-2 star reviews", "value": format_pct(row["pct_from_1_2_star"])},
     ])
 
+    issue_all = df[df["issues"].str.contains(issue, regex=False)]
+
+    st.write("")
+    col_ratings, col_terms = st.columns(2)
+    with col_ratings:
+        st.markdown(
+            '<div class="lg-eyebrow" style="margin-bottom:6px;">Ratings for this issue</div>',
+            unsafe_allow_html=True,
+        )
+        _rating_breakdown_chart(issue_all)
+    with col_terms:
+        st.markdown(
+            '<div class="lg-eyebrow" style="margin-bottom:6px;">Frequent terms in matched reviews</div>',
+            unsafe_allow_html=True,
+        )
+        _keyword_chart(issue_all)
+
     st.write("")
     st.markdown(
         '<div class="lg-eyebrow" style="margin-bottom:6px;">Filters</div>',
@@ -94,22 +116,36 @@ def render(tables: dict) -> None:
     rating_filter = rating_filter or [1, 2, 3, 4, 5]
     sort_order = sort_order or "Most recent"
 
-    tagged = df[df["issues"].str.contains(issue, regex=False)]
-    tagged = tagged[tagged["rating"].isin(rating_filter)]
+    tagged = issue_all[issue_all["rating"].isin(rating_filter)]
 
     if sort_order == "Most recent":
         tagged = tagged.sort_values("review_date", ascending=False)
     else:
         tagged = tagged.sort_values("thumbs_up", ascending=False)
 
+    # Reset to page 1 whenever the issue or filters change, so switching
+    # categories never leaves the reader stranded on an empty page 3.
+    filter_signature = (issue, tuple(sorted(rating_filter)), sort_order)
+    if st.session_state.get("_explorer_signature") != filter_signature:
+        st.session_state["_explorer_page"] = 0
+        st.session_state["_explorer_signature"] = filter_signature
+    page = st.session_state.get("_explorer_page", 0)
+
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    page_df = tagged.iloc[start:end]
+
+    range_end = min(end, len(tagged))
+    range_label = f"{start + 1:,}-{range_end:,}" if len(tagged) else "0"
     st.markdown(
         f'<p class="lg-subtitle" style="margin-top:14px;">'
-        f'<strong style="color:{COLORS["ink"]};">{len(tagged):,} reviews</strong> match this filter.</p>',
+        f'Showing <strong style="color:{COLORS["ink"]};">{range_label}</strong> of '
+        f'<strong style="color:{COLORS["ink"]};">{len(tagged):,}</strong> matching reviews.</p>',
         unsafe_allow_html=True,
     )
     st.write("")
 
-    for _, r in tagged.head(25).iterrows():
+    for _, r in page_df.iterrows():
         stars = "\u2605" * int(r["rating"]) + "\u2606" * (5 - int(r["rating"]))
         # tone_colors("neutral") resolves to near-black ink, which is fine
         # as a small-text default elsewhere (tags, stamps) but is actually
@@ -147,8 +183,85 @@ def render(tables: dict) -> None:
         )
         st.markdown(card_html, unsafe_allow_html=True)
 
-    if len(tagged) > 25:
+    st.write("")
+    col_prev, col_page, col_next = st.columns([1, 2, 1])
+    total_pages = max(1, -(-len(tagged) // PAGE_SIZE))  # ceil division
+    with col_prev:
+        if st.button("\u2190 Previous", disabled=(page == 0), width="stretch"):
+            st.session_state["_explorer_page"] = page - 1
+            st.rerun()
+    with col_page:
         st.markdown(
-            f'<p class="lg-subtitle">Showing 25 of {len(tagged):,} matching reviews.</p>',
+            f'<p class="lg-subtitle" style="text-align:center;margin-top:6px;">'
+            f'Page {page + 1} of {total_pages}</p>',
             unsafe_allow_html=True,
         )
+    with col_next:
+        if st.button("Next \u2192", disabled=(end >= len(tagged)), width="stretch"):
+            st.session_state["_explorer_page"] = page + 1
+            st.rerun()
+
+
+def _rating_breakdown_chart(issue_df) -> None:
+    counts = issue_df["rating"].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
+    star_colors = {
+        1: COLORS["danger"], 2: COLORS["danger"],
+        3: COLORS["warning"],
+        4: COLORS["faint"], 5: COLORS["faint"],
+    }
+    fig = go.Figure(
+        go.Bar(
+            x=[f"{s}\u2605" for s in counts.index],
+            y=counts.values,
+            marker_color=[star_colors[s] for s in counts.index],
+            text=[f"{v:,}" for v in counts.values],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=11),
+        margin=dict(l=10, r=10, t=10, b=10),
+        yaxis=dict(gridcolor=COLORS["rule"]),
+        xaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        height=240,
+        showlegend=False,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+
+def _keyword_chart(issue_df, top_k: int = 10) -> None:
+    """Top terms actually present in the reviews matched to this category -
+    lets a reader sanity-check the regex against real vocabulary rather
+    than just the rule pattern in Methodology."""
+    counter = Counter()
+    for text in issue_df["review_text"]:
+        counter.update(tokenize(text))
+    top_terms = counter.most_common(top_k)
+
+    if not top_terms:
+        st.info("Not enough matched reviews to extract terms.")
+        return
+
+    terms, counts = zip(*top_terms)
+    fig = go.Figure(
+        go.Bar(
+            x=counts[::-1],
+            y=terms[::-1],
+            orientation="h",
+            marker_color=COLORS["interact"],
+            text=[f"{c:,}" for c in counts[::-1]],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Sans, sans-serif", color=COLORS["ink"], size=11),
+        margin=dict(l=10, r=30, t=10, b=10),
+        xaxis=dict(gridcolor=COLORS["rule"]),
+        yaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        height=240,
+    )
+    st.plotly_chart(fig, width="stretch")

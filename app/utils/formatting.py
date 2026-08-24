@@ -56,6 +56,19 @@ def validation_tone(status) -> str:
     }.get(status, "neutral")
 
 
+def trend_tone(trend) -> str:
+    """Semantic tone for a trend direction. Every category here is a
+    complaint volume, so 'increasing' is the bad direction and 'decreasing'
+    is the good one - the same danger/success mapping the validation and
+    tier badges use, not a fresh color rule just for this column.
+    """
+    return {
+        "increasing": "danger",
+        "decreasing": "success",
+        "stable": "neutral",
+    }.get(trend, "neutral")
+
+
 def trend_arrow(trend) -> str:
     if trend is None:
         return TREND_ARROWS["insufficient_data"]

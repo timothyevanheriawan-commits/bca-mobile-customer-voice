@@ -16,6 +16,8 @@ re-reading the monthly table themselves.
 
 from __future__ import annotations
 
+from itertools import combinations
+
 import pandas as pd
 
 
@@ -148,3 +150,64 @@ def issue_trend_direction(monthly_share_df: pd.DataFrame, min_months: int = 4) -
         })
 
     return pd.DataFrame(rows).sort_values("issue").reset_index(drop=True)
+
+
+def issue_cooccurrence_table(df: pd.DataFrame, issues_col: str = "issues",
+                              top_k: int = 10) -> pd.DataFrame:
+    """Which pairs of issues get tagged on the SAME review, and how often.
+
+    Only reviews with 2+ tags contribute (single-issue reviews have no pair
+    to count). This exists to answer a question the frequency table can't:
+    not "how big is each issue alone" but "which problems tend to show up
+    together" - e.g. a failed-transaction complaint that also mentions the
+    indicator light points at one underlying incident, not two independent
+    ones, which matters for how a fix gets scoped.
+    """
+    pair_counts: dict[tuple[str, str], int] = {}
+    for issue_str in df[issues_col].fillna(""):
+        tags = sorted(set(t for t in issue_str.split(",") if t))
+        if len(tags) < 2:
+            continue
+        for a, b in combinations(tags, 2):
+            pair_counts[(a, b)] = pair_counts.get((a, b), 0) + 1
+
+    if not pair_counts:
+        return pd.DataFrame(columns=["issue_a", "issue_b", "n_reviews"])
+
+    rows = [
+        {"issue_a": a, "issue_b": b, "n_reviews": n}
+        for (a, b), n in pair_counts.items()
+    ]
+    return (
+        pd.DataFrame(rows)
+        .sort_values("n_reviews", ascending=False)
+        .head(top_k)
+        .reset_index(drop=True)
+    )
+
+
+def issue_rating_matrix(df: pd.DataFrame, issues_col: str = "issues",
+                         rating_col: str = "rating") -> pd.DataFrame:
+    """Issue x star-rating counts - how each category's tagged reviews
+    split across the 1-5 star scale.
+
+    `pct_from_1_2_star` in issue_frequency_table already answers "is this
+    issue mostly low-star" as a single number; this table exists to show
+    the actual shape (e.g. an issue split evenly across 1 and 2 stars reads
+    differently from one concentrated entirely at 1 star, even if both
+    have the same pct_from_1_2_star).
+    """
+    all_categories = set()
+    for issue_str in df[issues_col].fillna(""):
+        if issue_str:
+            all_categories.update(issue_str.split(","))
+
+    rows = []
+    for category in sorted(all_categories):
+        tagged = df[df[issues_col].fillna("").str.contains(category, regex=False)]
+        counts = tagged[rating_col].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
+        row = {"issue": category, "n_mentions": len(tagged)}
+        row.update({f"star_{s}": int(counts[s]) for s in [1, 2, 3, 4, 5]})
+        rows.append(row)
+
+    return pd.DataFrame(rows).sort_values("n_mentions", ascending=False).reset_index(drop=True)

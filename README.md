@@ -1,8 +1,9 @@
+
 # BCA Mobile Customer Voice Analytics
 
 An end-to-end **customer voice analytics and issue-prioritization system** built from Google Play reviews of BCA Mobile.
 
-The project turns unstructured customer reviews into **auditable issue signals**, validates the classification rules against manually reviewed samples, tracks how issue prevalence changes over time, and surfaces which problems deserve attention first.
+The project turns unstructured customer reviews into  **auditable issue signals** , validates the classification rules against manually reviewed samples, tracks how issue prevalence changes over time, and surfaces which problems deserve attention first.
 
 The analysis answers three practical questions:
 
@@ -10,17 +11,38 @@ The analysis answers three practical questions:
 2. **Which problems appear most often among negative reviews, and are they getting worse?**
 3. **Which issues should be prioritized based on frequency, trend, financial impact, and classification confidence?**
 
-The project deliberately avoids treating sentiment as the final answer. Instead, it focuses on **specific customer problems that can be inspected, validated, and acted on**.
+The project deliberately avoids treating sentiment as the final answer. Instead, it focuses on  **specific customer problems that can be inspected, validated, and acted on** .
 
-**📊 [View the live interactive dashboard](YOUR_STREAMLIT_URL_HERE)**
+**📊 Live interactive dashboard:** https://bca-mobile-customer-voice.streamlit.app
 
-Built with **Python, pandas, scikit-learn, Streamlit, Plotly, and rule-based text classification**.
+Built with  **Python, pandas, scikit-learn, Streamlit, Plotly, and rule-based text classification** .
+
+---
+
+## Screenshots
+
+<!--
+  Add real screenshots here before sharing this repo — a README with no
+  visuals is the single biggest drop-off point for anyone browsing GitHub
+  who won't run the app locally. Suggested shots, saved to docs/screenshots/:
+    1. Overview — hero callout + priority ledger + recommended actions
+    2. Trends — monthly heatmap
+    3. Issue Explorer — evidence cards for one category
+    4. Methodology — precision chart
+  Then replace this block with:
+    ![Overview](docs/screenshots/overview.png)
+    ![Trends](docs/screenshots/trends.png)
+    ![Issue Explorer](docs/screenshots/issue_explorer.png)
+    ![Methodology](docs/screenshots/methodology.png)
+-->
+
+language*(screenshots pending — see comment in the README source)*
 
 ---
 
 ## Business Problem
 
-App-store ratings are useful as a high-level signal, but a rating alone does not tell a product team **what went wrong**.
+App-store ratings are useful as a high-level signal, but a rating alone does not tell a product team  **what went wrong** .
 
 A 1-star review might describe:
 
@@ -50,7 +72,7 @@ That makes the resulting recommendations easier to inspect and challenge.
 
 ### 1. The dataset contains 5,000 customer reviews covering May–August 2026
 
-The committed classified dataset contains exactly **5,000 reviews**, with review dates spanning **May 1, 2026 to August 18, 2026**. Each record includes rating, review date, review text, helpfulness, rating group, detected issue labels, issue count, and whether at least one issue was detected.
+The committed classified dataset contains exactly  **5,000 reviews** , with review dates spanning  **May 1, 2026 to August 18, 2026** . Each record includes rating, review date, review text, helpfulness, rating group, detected issue labels, issue count, and whether at least one issue was detected.
 
 The data is therefore structured not only for exploratory analysis, but also for tracing individual customer complaints back to the underlying review text.
 
@@ -75,7 +97,7 @@ A single review can belong to multiple categories, because one complaint can des
 * `ui_ux_regression`
 * `device_compatibility`
 
-The reason for this choice is deliberate: a reviewer can read a rule and understand **why a review matched**, rather than having to trust an opaque model.
+The reason for this choice is deliberate: a reviewer can read a rule and understand  **why a review matched** , rather than having to trust an opaque model.
 
 The approach does have an important trade-off: keyword-based rules can miss complaints that describe a problem without using the expected vocabulary. The project therefore treats recall gaps as a known limitation instead of claiming perfect coverage.
 
@@ -133,10 +155,10 @@ The current repository state also documents an important example of this discipl
 
 The latest classifier revision regenerated the 5,000-row dataset and reduced the number of reviews tagged with:
 
-| Issue                     | Earlier Count | Current Count |
-| ------------------------- | ------------: | ------------: |
-| **App Performance**       |           688 |       **641** |
-| **Unexplained Deduction** |           174 |        **95** |
+| Issue                           | Earlier Count | Current Count |
+| ------------------------------- | ------------: | ------------: |
+| **App Performance**       |           688 | **641** |
+| **Unexplained Deduction** |           174 |  **95** |
 
 The change was targeted at false-positive patterns rather than indiscriminately broadening the rules. The repository documents examples including failed transactions being confused with unexplained deductions, unsupported devices being confused with app-performance complaints, and negated phrases such as “ga pake lemot” being incorrectly treated as active performance problems.
 
@@ -167,8 +189,8 @@ The project intentionally uses this simple comparison rather than fitting a regr
 
 Recommendations should be driven by the evidence ledger rather than by raw issue volume alone.
 
-| Signal                              | Situation                                                                     | Priority            | Recommended Action                                                    | Objective                                          |
-| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
+| Signal                                    | Situation                                                                     | Priority                  | Recommended Action                                                    | Objective                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
 | **Financial-impact issues**         | Failed transactions or deductions directly affect customer money              | **Critical / High** | Investigate root causes and prioritize engineering fixes              | Reduce high-severity financial incidents           |
 | **Increasing issues**               | Issue share is materially higher in the later half of the observation window  | **High**            | Investigate recent releases, infrastructure, or process changes       | Prevent emerging problems from becoming persistent |
 | **High-frequency validated issues** | Problem appears repeatedly and classification confidence is established       | **High**            | Prioritize product/process remediation                                | Improve the largest recurring customer pain points |
@@ -205,7 +227,7 @@ Priority Tiering
 Interactive Streamlit Dashboard
 ```
 
-### Data Cleaning
+text### Data Cleaning
 
 The repository includes dedicated cleaning and audit modules before issue analysis.
 
@@ -226,7 +248,7 @@ issue_count
 has_issue
 ```
 
-The final processed dataset contains **5,000 review records**.
+textThe final processed dataset contains  **5,000 review records** .
 
 ---
 
@@ -263,7 +285,7 @@ indicator_light_stuck
 app_performance
 ```
 
-rather than being forced into a single category.
+textrather than being forced into a single category.
 
 This is important because customer complaints frequently contain several related problems.
 
@@ -277,9 +299,9 @@ Validation uses manually annotated samples stored in:
 data/validation/
 ```
 
-The repository contains precision samples for multiple categories and recall-gap samples for identifying cases where the classifier failed to assign an issue.
+textThe repository contains precision samples for multiple categories and recall-gap samples for identifying cases where the classifier failed to assign an issue.
 
-Precision is calculated from the manually reviewed sample and compared against the project's **0.80 threshold**.
+Precision is calculated from the manually reviewed sample and compared against the project's  **0.80 threshold** .
 
 Categories below that threshold are explicitly marked `needs_regex_fix` rather than silently treated as reliable.
 
@@ -294,7 +316,7 @@ For every issue category, the project calculates:
 * share of negative reviews
 * percentage originating from 1–2 star reviews
 
-Because a review can contain multiple issue tags, issue counts **do not necessarily sum to the total number of reviews**.
+Because a review can contain multiple issue tags, issue counts  **do not necessarily sum to the total number of reviews** .
 
 ---
 
@@ -310,7 +332,7 @@ vs.
 Second half of observation window
 ```
 
-and classifies the resulting direction using a ±20% relative-change threshold.
+textand classifies the resulting direction using a ±20% relative-change threshold.
 
 The project deliberately avoids regression-based trend modeling because the observation window is short and some issue categories have small sample sizes.
 
@@ -334,7 +356,7 @@ Low
 = below the frequency threshold
 ```
 
-The current minimum negative-review-share threshold is **3%**.
+textThe current minimum negative-review-share threshold is  **3%** .
 
 Validation status is displayed separately so that a high-priority category can still be visibly marked as provisional when its classification has not yet been adequately confirmed.
 
@@ -362,9 +384,9 @@ The processed dataset is committed at:
 data/processed/bca_mobile_reviews_classified.csv
 ```
 
-### Important Dataset Note
+text### Important Dataset Note
 
-This project is based on **user-generated Google Play reviews**, not internal BCA operational, transaction, or customer-service data.
+This project is based on  **user-generated Google Play reviews** , not internal BCA operational, transaction, or customer-service data.
 
 The findings therefore describe what customers choose to report publicly in app-store reviews. They should not be interpreted as a complete representation of all BCA Mobile incidents or the entire customer base.
 
@@ -386,11 +408,14 @@ It provides:
 * negative-review volume
 * high-priority issue count
 * validation warnings
+* a handful of real, verbatim customer reviews ("In their own words") for the top-priority issue
 * rating distribution
 * priority ledger
+* recommended actions, one plain sentence per top-tier issue, generated from the same tier/trend/validation columns as the ledger
+* an illustrative financial-exposure estimate for the two money-affecting categories
 * share of negative reviews by issue
 
-The top-priority callout is generated directly from the live priority table so that the headline and the detailed ledger cannot drift apart.
+The top-priority callout, recommended actions, and financial-exposure estimate are all generated directly from the live priority table (`src/prioritization.py`) so the headline, the ledger, and the recommendations can never drift apart. The financial-exposure figure uses an explicit, clearly-labeled assumed average transaction value (`ASSUMED_AVG_TRANSACTION_IDR` in `app/components/overview.py`) — it is an order-of-magnitude illustration, not a reconciled number, and should be replaced with a real average transaction value before being quoted externally.
 
 ---
 
@@ -409,7 +434,7 @@ The trend calculations are generated from the current review dataset rather than
 
 ### Issue Explorer
 
-The Issue Explorer is the **customer evidence layer**.
+The Issue Explorer is the  **customer evidence layer** .
 
 For a selected issue, users can inspect:
 
@@ -468,37 +493,37 @@ git clone https://github.com/timothyevanheriawan-commits/bca-mobile-customer-voi
 cd bca-mobile-customer-voice
 ```
 
-### 2. Create a virtual environment
+bash### 2. Create a virtual environment
 
 ```bash
 python -m venv venv
 ```
 
-Activate on Windows:
+bashActivate on Windows:
 
 ```powershell
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+powershell### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the dashboard
+bash### 4. Run the dashboard
 
 ```bash
 streamlit run app/dashboard.py
 ```
 
-The dashboard will then be available at:
+bashThe dashboard will then be available at:
 
 ```text
 http://localhost:8501
 ```
 
----
+text---
 
 ## Repository Structure
 
@@ -546,11 +571,12 @@ http://localhost:8501
 │   ├── data_collection.py
 │   ├── issue_classification.py
 │   ├── prioritization.py
-│   ├── sentiment.py
 │   ├── validation.py
 │   └── ...
 │
 ├── tests/
+│   ├── test_analysis.py
+│   └── test_cleaning.py
 │
 ├── requirements.txt
 ├── LICENSE
@@ -558,26 +584,27 @@ http://localhost:8501
 └── sessionHANDOFF.md
 ```
 
-The repository separates the dashboard application from reusable analytical modules, while keeping the processed dataset and validation artifacts under `data/`.
+textThe repository separates the dashboard application from reusable analytical modules, while keeping the processed dataset and validation artifacts under `data/`.
 
 ---
 
 ## Limitations
 
-* The analysis is based on **public Google Play reviews**, so it represents reported customer voice rather than the complete population of BCA Mobile users.
-* The dataset covers only **May–August 2026**, giving the trend analysis a relatively short observation window.
+* The analysis is based on  **public Google Play reviews** , so it represents reported customer voice rather than the complete population of BCA Mobile users.
+* The dataset covers only  **May–August 2026** , giving the trend analysis a relatively short observation window.
 * Rule-based classification is transparent but cannot achieve perfect recall because customers may describe the same problem using vocabulary that is not captured by the rules.
-* Some issue categories have small numbers of observations, making broad generalizations risky.
+* Some issue categories have small numbers of observations, making broad generalizations risky. Any category under 10 total mentions (currently `ui_ux_regression`, at 2) is explicitly flagged as `low_sample` in the priority table and shown as "insufficient sample" in the dashboard, rather than being charted alongside categories with enough volume to read a share or trend from.
 * Validation quality varies by issue category. Some categories currently have fresh unannotated samples and therefore cannot honestly be presented as fully validated.
 * Trend direction is intentionally based on first-half versus second-half monthly issue share rather than a fitted statistical trend model. This improves interpretability but sacrifices some statistical sophistication.
 * A review may contain multiple issue labels, so issue counts are not additive.
 * App-store ratings and text can disagree; a review may receive a high rating while still describing a concrete complaint. The classifier therefore does not assume that positive ratings imply absence of problems.
+* The dashboard's "Estimated financial exposure" figure is an illustrative order-of-magnitude estimate (mention count × an assumed average transaction value), not a measured financial total. The assumption is stated explicitly next to the number and in `app/components/overview.py`; replace it with a real average transaction value before quoting the figure externally.
 
 ---
 
 ## Project Goal
 
-This project demonstrates an end-to-end approach to **Customer Voice Analytics**, combining data preparation, transparent text classification, manual validation, issue-level analysis, trend analysis, prioritization, and interactive visualization.
+This project demonstrates an end-to-end approach to  **Customer Voice Analytics** , combining data preparation, transparent text classification, manual validation, issue-level analysis, trend analysis, prioritization, and interactive visualization.
 
 The objective is not simply to count complaints.
 

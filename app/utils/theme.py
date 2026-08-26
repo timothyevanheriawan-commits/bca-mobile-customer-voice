@@ -579,8 +579,19 @@ def inject_css() -> None:
         /* Ledger tables - alternating green-bar rows, real <table>    */
         /* ---------------------------------------------------------- */
 
+        /* Wrapper, not the table itself, owns the scroll - lets a wide
+           ledger (7+ columns) scroll horizontally on a narrow/mobile
+           viewport instead of squeezing every column or blowing out the
+           page width. */
+        .lg-table-wrap {{
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }}
+
         .lg-ledger {{
             width: 100%;
+            min-width: 560px;
             border-collapse: collapse;
             font-size: 0.86rem;
         }}
@@ -626,6 +637,36 @@ def inject_css() -> None:
             color: {COLORS['warning']};
             margin-top: 3px;
             display: block;
+        }}
+
+        /* ---------------------------------------------------------- */
+        /* Quote cards - real review text, Overview page               */
+        /* ---------------------------------------------------------- */
+
+        .lg-quote {{
+            background-color: {COLORS['surface']};
+            border: 1px solid {COLORS['rule']};
+            border-left: 3px solid {COLORS['interact']};
+            border-radius: 2px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }}
+
+        .lg-quote-text {{
+            font-family: {FONT_BODY};
+            font-style: italic;
+            font-size: 0.92rem;
+            color: {COLORS['ink']};
+            line-height: 1.5;
+        }}
+
+        .lg-quote-meta {{
+            font-family: {FONT_MONO};
+            font-size: 0.72rem;
+            color: {COLORS['muted']};
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }}
 
         .lg-trend-label {{
@@ -855,6 +896,23 @@ def callout(label: str, title: str, detail: str, tone: str) -> None:
     st.markdown(html, unsafe_allow_html=True)
 
 
+def quote_card(text: str, rating: int, date_str: str) -> str:
+    """One real, verbatim customer review rendered as a pull-quote.
+
+    Text must already be HTML-escaped by the caller (this module doesn't
+    know if it's getting raw review text) - same convention as
+    ledger_table, so escaping responsibility stays with whoever is closest
+    to the untrusted source string.
+    """
+    stars = "\u2605" * int(rating) + "\u2606" * (5 - int(rating))
+    return (
+        f'<div class="lg-quote">'
+        f'<div class="lg-quote-text">&ldquo;{text}&rdquo;</div>'
+        f'<div class="lg-quote-meta">{stars} &middot; {date_str}</div>'
+        f'</div>'
+    )
+
+
 def pipeline_flow(steps: list[tuple[str, str]]) -> None:
     """steps: [(title, description), ...] rendered as a connected flow."""
     parts = []
@@ -946,6 +1004,7 @@ def ledger_table(headers: list[str], rows: list[list[str]], col_classes: list[st
         for row in rows
     )
     st.markdown(
-        f'<table class="lg-ledger"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
+        f'<div class="lg-table-wrap"><table class="lg-ledger"><thead><tr>{head}</tr></thead>'
+        f'<tbody>{body}</tbody></table></div>',
         unsafe_allow_html=True,
     )

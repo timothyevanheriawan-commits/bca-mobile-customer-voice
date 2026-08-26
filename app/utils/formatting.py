@@ -95,3 +95,21 @@ def format_count(value) -> str:
     except TypeError:
         return "\u2013"
     return f"{int(value):,}"
+
+
+def format_idr(value) -> str:
+    """Rough Rupiah figure for the financial-exposure estimate. Rounded to
+    the nearest million and expressed as 'Rp X.Y jt' rather than a false-
+    precision full number, since the input is already an order-of-magnitude
+    estimate, not a reconciled amount."""
+    if value is None:
+        return "\u2013"
+    try:
+        if value != value:
+            return "\u2013"
+    except TypeError:
+        return "\u2013"
+    millions = value / 1_000_000
+    if millions >= 1000:
+        return f"Rp {millions / 1000:,.1f} miliar"
+    return f"Rp {millions:,.1f} jt"

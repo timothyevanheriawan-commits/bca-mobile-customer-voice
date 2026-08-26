@@ -42,6 +42,14 @@ def issue_frequency_table(df: pd.DataFrame, issues_col: str = "issues") -> pd.Da
         if issue_str:
             all_categories.update(issue_str.split(","))
 
+    columns = ["issue", "n_mentions", "share_of_all_reviews", "share_of_negative_reviews", "pct_from_1_2_star"]
+    if not all_categories:
+        # No tagged categories at all (e.g. an empty input frame, or a
+        # dataset where nothing was classified yet) - return the right
+        # empty shape rather than letting sort_values fail on a frame with
+        # no columns.
+        return pd.DataFrame(columns=columns)
+
     rows = []
     for category in sorted(all_categories):
         tagged = df[df[issues_col].fillna("").str.contains(category, regex=False)]
@@ -56,7 +64,7 @@ def issue_frequency_table(df: pd.DataFrame, issues_col: str = "issues") -> pd.Da
             "pct_from_1_2_star": round(low_star / n_mentions, 3) if n_mentions else 0,
         })
 
-    return pd.DataFrame(rows).sort_values("n_mentions", ascending=False).reset_index(drop=True)
+    return pd.DataFrame(rows, columns=columns).sort_values("n_mentions", ascending=False).reset_index(drop=True)
 
 
 def monthly_issue_share(df: pd.DataFrame, issues_col: str = "issues",

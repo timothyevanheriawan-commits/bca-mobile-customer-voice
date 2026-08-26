@@ -11,11 +11,14 @@ the table underneath it.
 
 from __future__ import annotations
 
+import html
+
 import plotly.graph_objects as go
 import streamlit as st
 
 from app.utils.formatting import (
     format_count,
+    format_idr,
     format_pct,
     issue_label,
     tier_color,
@@ -23,7 +26,14 @@ from app.utils.formatting import (
     trend_arrow,
     validation_tone,
 )
-from app.utils.theme import COLORS, breadcrumb, callout, ledger_table, metric_row, stamp, tag
+from app.utils.theme import COLORS, breadcrumb, callout, ledger_table, metric_row, quote_card, stamp, tag
+from src.prioritization import MONEY_AFFECTING_CATEGORIES, estimate_financial_exposure
+
+# Placeholder assumption, not a measured figure - see
+# src.prioritization.estimate_financial_exposure's docstring. Stated here,
+# in one place, so it's easy to find and replace once a real average
+# transaction value is available (e.g. from BCA transaction data).
+ASSUMED_AVG_TRANSACTION_IDR = 500_000
 
 STAR_COLORS = {
     1: COLORS["danger"], 2: "#C97A64",
@@ -110,6 +120,18 @@ def render(tables: dict) -> None:
     )
 
     st.write("")
+    st.subheader("In their own words")
+    st.markdown(
+        '<p class="lg-subtitle">Real reviews behind the top priority issue, unedited '
+        'except for whitespace. Numbers above tell you how big the problem is; these tell '
+        'you what it actually sounds like. See every review for any category in Issue '
+        'Explorer.</p>',
+        unsafe_allow_html=True,
+    )
+    st.write("")
+    _pull_quotes(df, top["issue"])
+
+    st.write("")
     st.subheader("Ratings, at a glance")
     st.markdown(
         '<p class="lg-subtitle">Count of reviews at each star rating. The dip in the '
@@ -132,6 +154,34 @@ def render(tables: dict) -> None:
     st.write("")
 
     _priority_ledger(priority_df)
+
+    st.write("")
+    st.subheader("Recommended actions")
+    st.markdown(
+        '<p class="lg-subtitle">What to actually do about the ledger above, derived '
+        'directly from each row\'s tier, trend, and validation status - not a separate '
+        'judgment call. See <code>src.prioritization.recommend_action</code> for the exact '
+        'rule behind each sentence.</p>',
+        unsafe_allow_html=True,
+    )
+    st.write("")
+    _recommended_actions(priority_df)
+
+    exposure_df = estimate_financial_exposure(tables["frequency"], ASSUMED_AVG_TRANSACTION_IDR)
+    if not exposure_df.empty:
+        st.write("")
+        st.subheader("Estimated financial exposure")
+        st.markdown(
+            '<p class="lg-subtitle">Order-of-magnitude only, not a reconciled figure: '
+            f'mentions &times; an assumed average transaction value of '
+            f'{format_idr(ASSUMED_AVG_TRANSACTION_IDR)}, stated here as a placeholder '
+            'assumption. Replace with a real average transaction value before quoting this '
+            'externally - it exists to make the scale of "money affecting" issues '
+            'concrete, not to be a precise total.</p>',
+            unsafe_allow_html=True,
+        )
+        st.write("")
+        _financial_exposure(exposure_df)
 
     st.write("")
     st.subheader("Share of negative reviews, by issue")
@@ -275,6 +325,8 @@ def _priority_ledger(priority_df) -> None:
             else ""
         )
         issue_cell = f"<strong>{issue_label(row['issue'])}</strong>"
+        if row.get("low_sample"):
+            issue_cell += tag("insufficient sample", "neutral")
         if row["caveat"]:
             issue_cell += f'<span class="lg-caveat">{row["caveat"]}</span>'
 
@@ -292,3 +344,59 @@ def _priority_ledger(priority_df) -> None:
         headers, rows,
         col_classes=["lg-num", "", "", "lg-right", "lg-right", "lg-right", ""],
     )
+
+
+def _recommended_actions(priority_df) -> None:
+    """The 3 highest-tier rows, restated as an instruction rather than a
+    ranking. Deliberately capped at 3 - this is meant to be read in full,
+    not scanned like the ledger above it, so it stays short on purpose."""
+    top_rows = priority_df.head(3)
+    for _, row in top_rows.iterrows():
+        callout(
+            label=f"{row['priority_tier']} priority · {issue_label(row['issue'])}",
+            title=row["recommended_action"],
+            detail=(
+                f"{format_count(row['n_mentions'])} mentions, "
+                f"{format_pct(row['share_of_negative_reviews'])} of negative reviews."
+            ),
+            tone=tier_tone(row["priority_tier"]),
+        )
+        st.write("")
+
+
+def _financial_exposure(exposure_df) -> None:
+    headers = ["Issue", "Mentions", "Assumed avg. transaction", "Estimated exposure"]
+    rows = [
+        [
+            f"<strong>{issue_label(row['issue'])}</strong>",
+            format_count(row["n_mentions"]),
+            format_idr(row["assumed_avg_transaction_idr"]),
+            format_idr(row["estimated_exposure_idr"]),
+        ]
+        for _, row in exposure_df.iterrows()
+    ]
+    ledger_table(headers, rows, col_classes=["", "lg-right", "lg-right", "lg-right"])
+
+
+def _pull_quotes(df, top_issue: str, n: int = 3) -> None:
+    """2-3 real, short reviews from the top-priority category, so the
+    landing page carries at least a little of the actual customer voice
+    instead of being aggregates end to end. Picked from short (readable at
+    a glance), low-star, high-helpfulness reviews tagged with the top
+    issue - not cherry-picked for content, just for length and visibility,
+    the same way a human skimming for a representative quote would filter.
+    """
+    candidates = df[
+        df["issues"].str.contains(top_issue, regex=False)
+        & (df["rating"] <= 2)
+        & (df["review_length"].between(25, 220))
+    ].sort_values("thumbs_up", ascending=False)
+
+    if candidates.empty:
+        st.info("No short, representative review found for this category yet.")
+        return
+
+    for _, r in candidates.head(n).iterrows():
+        text = html.escape(str(r["review_text"])).replace("\r\n", "\n").replace("\n", "<br>")
+        date_str = r["review_date"].strftime("%d %b %Y")
+        st.markdown(quote_card(text, r["rating"], date_str), unsafe_allow_html=True)

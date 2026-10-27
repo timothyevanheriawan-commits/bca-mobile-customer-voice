@@ -5,6 +5,15 @@ An end-to-end **customer voice analytics and issue-prioritization system** built
 
 The project turns unstructured customer reviews into  **auditable issue signals** , validates the classification rules against manually reviewed samples, tracks how issue prevalence changes over time, and surfaces which problems deserve attention first.
 
+## Key Findings
+
+Based on 5,000 Google Play reviews (May 1 to Aug 18, 2026), of which 2,313 are negative (1 to 2 stars).
+
+- **Failed transactions with money deducted are the top financial issue.** 387 mentions, 16.7% of negative reviews, precision 0.90 on a manual sample. The share is falling over the window.
+- **Device compatibility is the one high-priority issue that is growing.** It appears in 6.4% of negative reviews and its share is trending up (precision 0.83).
+- **The most common complaint is not the highest priority.** App performance is mentioned most (612 mentions, 26.5% of negative reviews) but is stable and has no direct financial impact, so it ranks Medium.
+- **Classification quality was checked, not assumed.** Nine of ten categories were manually validated at 0.83 to 0.97 precision. The tenth (UI/UX regression, 2 mentions) is flagged as too small to read.
+
 The analysis answers three practical questions:
 
 1. **What problems are BCA Mobile customers actually reporting?**
